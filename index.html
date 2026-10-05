@@ -606,8 +606,11 @@ body.is-settled .envelope-float{will-change:auto}
   will-change:transform,opacity;
   animation:fly 1.4s cubic-bezier(.15,.6,.4,1) forwards;
 }
+/* a mid keyframe lifts each chip slightly above its straight-line path,
+   so the debris pops up and then falls outward instead of sliding */
 @keyframes fly{
   0%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}
+  45%{opacity:1;transform:translate(calc(var(--tx) * .55),calc(var(--ty) * .6 - 16px)) rotate(calc(var(--r) * .5)) scale(.92)}
   70%{opacity:1}
   100%{opacity:0;transform:translate(var(--tx),var(--ty)) rotate(var(--r)) scale(.35)}
 }
@@ -940,7 +943,6 @@ body.is-settled .envelope-float{will-change:auto}
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const SVGNS   = 'http://www.w3.org/2000/svg';
-  const HEART   = 'M0 42C0 42-44 12-44-15c0-17 13-27 27-27 9 0 15 7 17 14 2-7 8-14 17-14 14 0 27 10 27 27 0 27-44 57-44 57Z';
 
   /* envelope geometry: height/width, and the flap reserve above it */
   const ENV_H   = 230 / 400;
@@ -1056,6 +1058,18 @@ body.is-settled .envelope-float{will-change:auto}
   /* ==========================================================
      Wax shatter
      ========================================================== */
+  /* Wax does not break into neat shapes — it snaps into irregular
+     chips. Five silhouettes picked at random keep the burst from
+     looking like one repeated stamp, and they read as fragments of
+     the heart-shaped seal rather than a different object. */
+  const WAX_CHIPS = [
+    'M-7 -9 L5 -11 L11 -1 L3 10 L-10 4 Z',
+    'M-9 -6 L4 -10 L10 5 L-6 11 Z',
+    'M-4 -11 L8 -6 L10 3 L1 11 L-9 6 L-11 -3 Z',
+    'M-8 -8 L11 -2 L-3 11 Z',
+    'M-10 -2 L-2 -11 L9 -7 L7 6 L-4 10 Z',
+  ];
+
   function shatter(){
     const r  = seal.getBoundingClientRect();
     const cx = r.left + r.width / 2;
@@ -1063,13 +1077,16 @@ body.is-settled .envelope-float{will-change:auto}
     const colors = ['#A43130', '#B83A37', '#7A2425', '#C14945'];
     const frag = document.createDocumentFragment();
 
-    for (let i = 0; i < 20; i++){
+    for (let i = 0; i < 22; i++){
       const s = document.createElementNS(SVGNS, 'svg');
-      s.setAttribute('viewBox', '-44 -42 88 84');
+      s.setAttribute('viewBox', '-13 -13 26 26');
       s.setAttribute('class', 'shard');
-      const size = 7 + Math.random() * 15;
-      const ang  = Math.random() * Math.PI * 2;
-      const dist = 90 + Math.random() * 280;
+      const size = 7 + Math.random() * 13;
+      // angles spaced evenly round the circle with a little jitter, rather
+      // than drawn fully at random — 22 random angles regularly clustered
+      // to one side and left the other bare, which read as unbalanced
+      const ang  = (i / 22) * Math.PI * 2 + (Math.random() - 0.5) * 0.55;
+      const dist = 75 + Math.random() * 295;
       s.style.width  = size + 'px';
       s.style.height = size + 'px';
       s.style.left = (cx - size / 2) + 'px';
@@ -1080,8 +1097,11 @@ body.is-settled .envelope-float{will-change:auto}
       s.style.setProperty('--r',  (Math.random() * 720 - 360) + 'deg');
       s.style.animationDelay = (Math.random() * 0.1) + 's';
       const p = document.createElementNS(SVGNS, 'path');
-      p.setAttribute('d', HEART);
+      p.setAttribute('d', WAX_CHIPS[Math.floor(Math.random() * WAX_CHIPS.length)]);
       p.setAttribute('fill', 'currentColor');
+      // a hair of a darker edge so each chip reads as a solid crumb
+      p.setAttribute('stroke', 'rgba(90,20,20,.5)');
+      p.setAttribute('stroke-width', '1.6');
       s.appendChild(p);
       frag.appendChild(s);
     }
