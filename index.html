@@ -187,8 +187,13 @@ body.is-open .scene--letter{opacity:1;pointer-events:auto}
 /* ============================================================
    SCENE 1 — ENVELOPE
    ============================================================ */
-.scene--envelope > *{opacity:0;animation:riseIn .8s var(--ease-glide) forwards}
-.script-top{animation-delay:.2s !important}
+/* the letter rises into this space, so the handwriting steps aside
+   as soon as the envelope starts to open */
+body.is-opening .script-top{opacity:0}
+
+/* the entrance animation is on the spans, so the parent's opacity is
+   free to transition out later */
+.scene--envelope > :not(.script-top){opacity:0;animation:riseIn .8s var(--ease-glide) forwards}
 .envelope-wrap{animation-delay:.35s !important}
 .hint{animation-delay:.6s !important}
 .signature{animation-delay:.8s !important}
@@ -203,6 +208,8 @@ body.is-open .scene--letter{opacity:1;pointer-events:auto}
   color:var(--burgundy);
   text-shadow:0 1px 0 rgba(255,255,255,.55);
   transform:rotate(-1.1deg);
+  opacity:1;
+  transition:opacity .55s ease;
 }
 .script-top span{display:block;opacity:0;animation:riseIn .8s var(--ease-glide) forwards}
 .script-top span:nth-child(1){animation-delay:.2s}
@@ -244,7 +251,7 @@ body.is-opening .envelope-float{animation:shake var(--dur-shake) cubic-bezier(.3
 .env-front svg{filter:drop-shadow(0 10px 18px rgba(90,40,30,.14))}
 
 .letter-sheet{
-  position:absolute;left:7%;width:86%;top:6%;height:112%;
+  position:absolute;left:7%;width:86%;top:6%;height:88%;
   transform:translateZ(-4px);
   transform-origin:50% 20%;
   border-radius:3px;
@@ -256,7 +263,9 @@ body.is-opening .envelope-float{animation:shake var(--dur-shake) cubic-bezier(.3
     transform var(--dur-letter) var(--ease-glide) var(--t-letter),
     opacity .4s ease 120ms;
 }
-body.is-opening .letter-sheet{transform:translateZ(-4px) translateY(-112%) rotate(-2.2deg)}
+/* 6% + 88% = 94%, so the sheet stays inside the envelope. It used to be
+   112% tall, which left ~43px of pink poking out below the bottom edge. */
+body.is-opening .letter-sheet{transform:translateZ(-4px) translateY(-114%) rotate(-2.2deg)}
 body.is-open .letter-sheet{opacity:0}
 /* The beat animates the outermost <svg>, which the browser composites.
    On an inner <path> it repainted the whole svg every frame — right
@@ -264,19 +273,29 @@ body.is-open .letter-sheet{opacity:0}
 .ls-heart{width:40%;color:var(--dec);opacity:.9;overflow:visible;animation:beat 1.6s ease-in-out infinite}
 @keyframes beat{0%,100%{transform:scale(1)}22%{transform:scale(1.13)}38%{transform:scale(.97)}}
 
-/* Flap rotates to exactly 180deg on a symmetric ease. The previous
-   overshoot curve pushed past 180deg, which swapped which face was
-   front-facing and made the flap visibly flicker mid-swing. */
+/* Flap rotates to exactly 180deg on an ease with no overshoot. The
+   previous overshoot curve pushed past 180deg, which swapped which
+   face was front-facing and made the flap visibly flicker mid-swing.
+   It ALSO translates down 115% of its own height (158 of the
+   envelope's 230 units), so the fold-back finishes INSIDE the
+   envelope's silhouette, hidden behind the back panel. Without that
+   tuck the opened flap stayed standing above the top edge, and since
+   it is 100% wide against the letter's 86%, its edges showed up as
+   stray cream triangles down both sides of the letter and under its
+   bottom. Both transform lists carry the same three functions so the
+   browser interpolates them function-by-function, not as a matrix. */
 .flap{
   position:absolute;left:0;width:100%;top:0;height:68.7%;
   transform-style:preserve-3d;
   transform-origin:50% 0%;
-  transform:translateZ(5px) rotateX(0deg);
+  transform:translateZ(5px) translateY(0%) rotateX(0deg);
   will-change:transform;
   transition:transform var(--dur-flap) var(--ease-swing) var(--t-flap);
   pointer-events:none;
 }
-body.is-opening .flap,body.is-open .flap{transform:translateZ(-6px) rotateX(180deg)}
+body.is-opening .flap,body.is-open .flap{
+  transform:translateZ(-6px) translateY(115%) rotateX(180deg);
+}
 .flap__face{position:absolute;inset:0;backface-visibility:hidden}
 .flap__face svg{width:100%;height:100%;display:block}
 /* no drop-shadow on the rotating face: a filter on a 3D-transformed

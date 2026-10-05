@@ -18,20 +18,38 @@ it, and the letter reveals itself.
 - Responsive down to small phones; respects `prefers-reduced-motion`; keyboard
   accessible with a visible focus ring
 
-## Retuning the animation
+## Animation notes
 
-The whole opening sequence is driven by variables at the top of the `<style>`
-block. Each phase begins as the previous one settles, so nothing competes for
-the compositor at the same moment:
+The whole sequence is driven by variables at the top of the `<style>` block.
+Each phase begins as the previous one settles, so nothing competes for the
+compositor at the same moment:
 
 ```css
---t-seal:    200ms;   /* wax cracks                     */
---t-flap:    640ms;   /* flap swings up                 */
---t-letter: 1300ms;   /* letter slides out              */
---t-exit:   2180ms;   /* envelope leaves, red blooms in */
+--t-seal:    200ms;   /* wax cracks                        */
+--t-flap:    660ms;   /* flap swings up and folds behind   */
+--t-letter: 1380ms;   /* letter slides out                 */
+--t-exit:   2200ms;   /* envelope leaves, red blooms in    */
 ```
 
 `--t-exit` is also read by the script, so changing it keeps JS and CSS in sync.
+
+Two geometry details are load-bearing, and both were bugs once:
+
+- The flap rotates to 180° **and** translates down by 115% of its own height,
+  so the fold-back finishes inside the envelope's silhouette where the back
+  panel hides it. Without that tuck the opened flap stood up above the top
+  edge; because the flap is 100% of the envelope width against the letter's
+  86%, its edges showed as stray cream triangles down both sides of the letter
+  and under its bottom.
+- The letter sheet occupies 6%–94% of the envelope's height. It used to be
+  112% tall, which left about 43px of pink poking out below the bottom edge.
+
+Both transform lists on the flap carry the same three functions
+(`translateZ() translateY() rotateX()`), so the browser interpolates them
+function-by-function rather than via a matrix decomposition.
+
+The handwriting fades out as soon as the envelope starts to open, so the
+letter rises into clear space rather than over the text.
 
 ## Performance notes
 
