@@ -36,6 +36,9 @@
   --dec:#E63338;        /* border red                     */
   --dec-d:#B93034;
   --cream-w:#FFF0EC;    /* border white                   */
+  /* the flower's centre — darker than every wax tone so it reads as an
+     eye rather than merging into the petals */
+  --flower-eye:#5A1A18;
   --body-ink:#B94748;   /* small body copy                */
 
   --font-script:'Caveat','Segoe Script','Bradley Hand',cursive;
@@ -383,13 +386,13 @@ body.is-opening .seal__half--l{
   transform:translate(-46%,26%) rotate(-24deg);opacity:0;
   transition:
     transform var(--dur-seal) cubic-bezier(.3,.9,.35,1) var(--t-seal),
-    opacity .3s ease calc(var(--t-seal) + 150ms);
+    opacity .45s ease calc(var(--t-seal) + 200ms);
 }
 body.is-opening .seal__half--r{
   transform:translate(46%,22%) rotate(22deg);opacity:0;
   transition:
     transform var(--dur-seal) cubic-bezier(.3,.9,.35,1) var(--t-seal),
-    opacity .3s ease calc(var(--t-seal) + 150ms);
+    opacity .45s ease calc(var(--t-seal) + 200ms);
 }
 
 .envelope-hit{
@@ -1009,33 +1012,41 @@ body.is-settled .envelope-float{will-change:auto}
   /* ==========================================================
      Ambient drifting flowers
      ========================================================== */
-  /* The wax seal is the heart, so what floats in the air behind the
-     envelope is flowers instead. Five slim petals radiating from a
-     solid centre — the petals are kept narrow and pushed outward so
-     they stay visibly separate; wide petals merging at the middle just
-     read as one blobby splat rather than a flower. */
+  /* The wax seal is the heart, so flowers are what appear elsewhere in
+     this design — both drifting in the air and thrown off when the seal
+     cracks. Five slim petals radiating from a solid centre: the petals
+     are kept narrow and pushed outward so they stay visibly separate.
+     Wide petals merging at the middle just read as one blobby splat
+     rather than a flower. */
+  function flowerShape(svg){
+    /* Tuned to stay legible when small. Thin needle petals radiating from
+       a dot merge into a five-pointed asterisk, and outlining them does
+       not help — at 16px the stroke eats most of a 3px petal and leaves
+       bristles. So: short, fat, round-topped petals with wide notches,
+       around a centre disc roughly as wide as a petal is long, in a
+       darker tone so the eye reads a flower rather than a star. */
+    for (let k = 0; k < 5; k++){
+      const e = document.createElementNS(SVGNS, 'ellipse');
+      e.setAttribute('cx', '0');
+      e.setAttribute('cy', '-30');
+      e.setAttribute('rx', '14');
+      e.setAttribute('ry', '20');
+      e.setAttribute('transform', 'rotate(' + (k * 72) + ')');
+      e.setAttribute('fill', 'currentColor');
+      svg.appendChild(e);
+    }
+    const disc = document.createElementNS(SVGNS, 'circle');
+    disc.setAttribute('r', '13');
+    disc.setAttribute('fill', 'var(--flower-eye)');
+    svg.appendChild(disc);
+    return svg;
+  }
+
   function flowerNode(){
     const s = document.createElementNS(SVGNS, 'svg');
     s.setAttribute('viewBox', '-50 -50 100 100');
     s.setAttribute('class', 'fflower');
-    for (let k = 0; k < 5; k++){
-      const e = document.createElementNS(SVGNS, 'ellipse');
-      e.setAttribute('cx', '0');
-      e.setAttribute('cy', '-28');
-      e.setAttribute('rx', '9');
-      e.setAttribute('ry', '19');
-      e.setAttribute('transform', 'rotate(' + (k * 72) + ')');
-      e.setAttribute('fill', 'currentColor');
-      s.appendChild(e);
-    }
-    // solid centre, so the eye sees a disc rather than a hole. No light
-    // pip: a pale dot in the middle of the petals just reads as a hole,
-    // especially at ~50% opacity over a cream page.
-    const disc = document.createElementNS(SVGNS, 'circle');
-    disc.setAttribute('r', '11');
-    disc.setAttribute('fill', 'currentColor');
-    s.appendChild(disc);
-    return s;
+    return flowerShape(s);
   }
 
   (function makeFlowers(n){
@@ -1058,35 +1069,32 @@ body.is-settled .envelope-float{will-change:auto}
   /* ==========================================================
      Wax shatter
      ========================================================== */
-  /* Wax does not break into neat shapes — it snaps into irregular
-     chips. Five silhouettes picked at random keep the burst from
-     looking like one repeated stamp, and they read as fragments of
-     the heart-shaped seal rather than a different object. */
-  const WAX_CHIPS = [
-    'M-7 -9 L5 -11 L11 -1 L3 10 L-10 4 Z',
-    'M-9 -6 L4 -10 L10 5 L-6 11 Z',
-    'M-4 -11 L8 -6 L10 3 L1 11 L-9 6 L-11 -3 Z',
-    'M-8 -8 L11 -2 L-3 11 Z',
-    'M-10 -2 L-2 -11 L9 -7 L7 6 L-4 10 Z',
-  ];
-
+  /* The seal throws off flowers rather than wax crumbs, matching the
+     flowers that drift in the background. They keep the four wax tones
+     so they still read as coming off the red seal. */
   function shatter(){
     const r  = seal.getBoundingClientRect();
     const cx = r.left + r.width / 2;
     const cy = r.top  + r.height / 2;
     const colors = ['#A43130', '#B83A37', '#7A2425', '#C14945'];
     const frag = document.createDocumentFragment();
+    /* Fewer and larger. Below about 22px the petals and centre fuse into
+       one star shape no matter how the petals are drawn, so every flower
+       is kept at or above that. */
+    const COUNT = 16;
 
-    for (let i = 0; i < 22; i++){
+    for (let i = 0; i < COUNT; i++){
       const s = document.createElementNS(SVGNS, 'svg');
-      s.setAttribute('viewBox', '-13 -13 26 26');
+      s.setAttribute('viewBox', '-50 -50 100 100');
       s.setAttribute('class', 'shard');
-      const size = 7 + Math.random() * 13;
+      const size = 22 + Math.random() * 14;
       // angles spaced evenly round the circle with a little jitter, rather
-      // than drawn fully at random — 22 random angles regularly clustered
-      // to one side and left the other bare, which read as unbalanced
-      const ang  = (i / 22) * Math.PI * 2 + (Math.random() - 0.5) * 0.55;
-      const dist = 75 + Math.random() * 295;
+      // than drawn fully at random — random angles regularly clustered to
+      // one side and left the other bare, which read as unbalanced
+      const ang  = (i / COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      // kept close in, so the burst reads as radiating from the seal
+      // rather than flowers drifting across the whole envelope
+      const dist = 55 + Math.random() * 135;
       s.style.width  = size + 'px';
       s.style.height = size + 'px';
       s.style.left = (cx - size / 2) + 'px';
@@ -1096,14 +1104,7 @@ body.is-settled .envelope-float{will-change:auto}
       s.style.setProperty('--ty', (Math.sin(ang) * dist - 90) + 'px');
       s.style.setProperty('--r',  (Math.random() * 720 - 360) + 'deg');
       s.style.animationDelay = (Math.random() * 0.1) + 's';
-      const p = document.createElementNS(SVGNS, 'path');
-      p.setAttribute('d', WAX_CHIPS[Math.floor(Math.random() * WAX_CHIPS.length)]);
-      p.setAttribute('fill', 'currentColor');
-      // a hair of a darker edge so each chip reads as a solid crumb
-      p.setAttribute('stroke', 'rgba(90,20,20,.5)');
-      p.setAttribute('stroke-width', '1.6');
-      s.appendChild(p);
-      frag.appendChild(s);
+      frag.appendChild(flowerShape(s));
     }
     burstBox.appendChild(frag);
     setTimeout(() => { burstBox.innerHTML = ''; }, 2300);

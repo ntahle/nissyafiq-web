@@ -5,8 +5,8 @@ it, and the letter reveals itself.
 
 ## Features
 
-- **Sealed envelope scene** with a 3D wax seal that cracks into irregular wax
-  chips, drifting flower particles, and
+- **Sealed envelope scene** with a 3D wax seal that cracks and throws off
+  flowers, drifting flower particles, and
   paper grain texture
 - **Press-to-open interaction** — click, tap, or press `Space` / `Enter`.
   The seal shatters, the flap folds back behind the envelope, and the letter
