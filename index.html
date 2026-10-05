@@ -18,6 +18,10 @@
   --cream:#FAF8F1;      /* stage ground (envelope scene) */
   --paper:#FFFCF6;      /* envelope paper                 */
   --cream-2:#F1ECE0;    /* envelope interior              */
+  /* the opened flap's inner face. Deliberately warmer/darker than the
+     page: at #F1ECE0 it differed from the background by only 17/255, so
+     the flap technically rendered but was invisible in practice. */
+  --paper-shade:#E2D6BA;
   --burgundy:#7A2D28;   /* fold lines + type              */
   --ink:#4E1F1D;
 
@@ -40,19 +44,36 @@
   --font-body:'Lora',Georgia,serif;
 
   /* ------------------------------------------------------------
-     OPENING TIMELINE — one place to retune the whole sequence.
-     Each phase begins only once the previous has finished, so no
-     two things compete for the compositor at the same moment.
+     ANIMATION TIMELINE — matched to the reference clip.
+
+     OPEN  : the flap swings first (~1.0s), then the letter follows
+             it out (~0.7s), with a small overlap as in the clip.
+     CLOSE : the exact reverse order — the letter drops back in
+             first (~0.9s), and the flap swings shut after it
+             (~1.2s), again overlapping.
+
+     The open timings live on the .is-opening / .is-open rules; the
+     close timings live on the BASE rules, because when a state class
+     is removed the transition that runs is the one on the element's
+     new (base) style. That is what makes close a different order
+     from open rather than a plain rewind.
      ------------------------------------------------------------ */
-  --t-seal:    200ms;   /* wax cracks                        */
-  --t-flap:    660ms;   /* flap swings up (seal already gone) */
-  --t-letter: 1380ms;   /* letter slides out (flap has landed) */
-  --t-exit:   2200ms;   /* envelope leaves, red blooms in     */
+  --t-seal:      0ms;    /* wax cracks immediately              */
+  --dur-seal:  420ms;
+  --t-flap:    150ms;    /* flap starts almost at once          */
+  --dur-flap: 1000ms;    /*   ~1.0s  (reference: ~1.0s)         */
+  --t-letter:  950ms;    /* letter follows as the flap lands    */
+  --dur-letter: 700ms;   /*   ~0.7s  (reference: ~0.65s)        */
+  --t-exit:   2000ms;    /* short hold, then the big reveal     */
+
+  /* close order, in reverse */
+  --t-close-letter:   250ms;
+  --dur-close-letter: 900ms;
+  --t-close-flap:     600ms;
+  --dur-close-flap:  1200ms;
+  --t-close-seal:    1550ms;  /* wax re-forms as the flap lands   */
 
   --dur-shake:  340ms;
-  --dur-seal:   480ms;
-  --dur-flap:   700ms;
-  --dur-letter: 760ms;
 
   --ease-glide: cubic-bezier(.22,.85,.3,1);
   --ease-pop:   cubic-bezier(.34,1.28,.5,1);
@@ -170,11 +191,14 @@ body.is-opening .hint span{animation-play-state:paused}
 .scene--envelope{
   display:flex;flex-direction:column;align-items:center;
   gap:clamp(10px,2.3vh,26px);
+  /* CLOSE (base): snap back quickly so the flap-swing is visible */
+  transition:opacity .4s ease, transform .6s var(--ease-glide);
+}
+/* OPEN: a slower dissolve while the red blooms in */
+body.is-open .scene--envelope{
+  opacity:0;transform:scale(.94) translateY(-3vh);pointer-events:none;
   transition:opacity .55s ease, transform .75s var(--ease-glide);
 }
-/* no filter:blur — blurring an ancestor of a preserve-3d subtree
-   forces it flat and stutters the exit */
-body.is-open .scene--envelope{opacity:0;transform:scale(.94) translateY(-3vh);pointer-events:none}
 
 /* The letter is long, so this scene scrolls normally instead of
    trapping the text inside a fixed-aspect card. It is position:fixed
@@ -189,11 +213,12 @@ body.is-open .scene--envelope{opacity:0;transform:scale(.94) translateY(-3vh);po
   overscroll-behavior:contain;
   scrollbar-width:thin;scrollbar-color:rgba(255,240,236,.5) transparent;
   opacity:0;pointer-events:none;
-  transition:opacity .75s ease;
+  /* CLOSE (base): clear out promptly so the envelope is visible */
+  transition:opacity .45s ease;
 }
 .scene--letter::-webkit-scrollbar{width:9px}
 .scene--letter::-webkit-scrollbar-thumb{background:rgba(255,240,236,.45);border-radius:9px}
-body.is-open .scene--letter{opacity:1;pointer-events:auto}
+body.is-open .scene--letter{opacity:1;pointer-events:auto;transition:opacity .75s ease}
 
 /* ============================================================
    SCENE 1 — ENVELOPE
@@ -268,16 +293,32 @@ body.is-opening .envelope-float{animation:shake var(--dur-shake) cubic-bezier(.3
   border-radius:3px;
   background:linear-gradient(170deg,#F9A2BC 0%,var(--pink) 46%,var(--pink-d) 100%);
   box-shadow:0 10px 22px rgba(120,30,40,.22);
-  display:grid;place-items:center;
+  display:grid;align-items:start;justify-items:center;
+  padding-top:16%;
   will-change:transform,opacity;
+  /* CLOSE timing: the letter drops back in first */
   transition:
-    transform var(--dur-letter) var(--ease-glide) var(--t-letter),
-    opacity .4s ease 120ms;
+    transform var(--dur-close-letter) var(--ease-glide) var(--t-close-letter),
+    opacity .3s ease;
 }
 /* 6% + 88% = 94%, so the sheet stays inside the envelope. It used to be
    112% tall, which left ~43px of pink poking out below the bottom edge. */
-body.is-opening .letter-sheet{transform:translateZ(-4px) translateY(-114%) rotate(-2.2deg)}
-body.is-open .letter-sheet{opacity:0}
+/* OPEN: the letter only rises PART WAY — in the reference clip roughly
+   a third to a half of it stays in the mouth of the envelope, it never
+   comes fully out. -48% of its own height ≈ 48% protruding. */
+body.is-opening .letter-sheet{
+  transform:translateZ(-4px) translateY(-48%) rotate(-2deg);
+  transition:
+    transform var(--dur-letter) var(--ease-glide) var(--t-letter),
+    opacity .3s ease;
+}
+body.is-open .letter-sheet{
+  transform:translateZ(-4px) translateY(-48%) rotate(-2deg);
+  opacity:0;
+  transition:
+    transform var(--dur-letter) var(--ease-glide) var(--t-letter),
+    opacity .32s ease .1s;
+}
 /* The beat animates the outermost <svg>, which the browser composites.
    On an inner <path> it repainted the whole svg every frame — right
    while the letter was sliding out in 3D. */
@@ -287,25 +328,31 @@ body.is-open .letter-sheet{opacity:0}
 /* Flap rotates to exactly 180deg on an ease with no overshoot. The
    previous overshoot curve pushed past 180deg, which swapped which
    face was front-facing and made the flap visibly flicker mid-swing.
-   It ALSO translates down 115% of its own height (158 of the
-   envelope's 230 units), so the fold-back finishes INSIDE the
-   envelope's silhouette, hidden behind the back panel. Without that
-   tuck the opened flap stayed standing above the top edge, and since
-   it is 100% wide against the letter's 86%, its edges showed up as
-   stray cream triangles down both sides of the letter and under its
-   bottom. Both transform lists carry the same three functions so the
-   browser interpolates them function-by-function, not as a matrix. */
+   It does NOT tuck: as in the reference clip, the opened flap stands
+   above the envelope's top edge. It used to fold down behind the back
+   panel to hide the wedges showing either side of the letter — but that
+   only looked wrong because the letter used to slide almost fully out,
+   exposing the flap's wide base as a stray band under it. Now the
+   letter stops about half way out, its own body covers the middle of
+   the flap, and only the two small tips flank it, as in the reference.
+   Both transform lists carry the same three functions so the browser
+   interpolates them function-by-function, not as a matrix. */
+/* BASE = closed pose, carrying the CLOSE timings (letter first,
+   then the flap). These run whenever the state classes are removed,
+   which is exactly what makes closing differ from opening. */
 .flap{
   position:absolute;left:0;width:100%;top:0;height:68.7%;
   transform-style:preserve-3d;
   transform-origin:50% 0%;
   transform:translateZ(5px) translateY(0%) rotateX(0deg);
   will-change:transform;
-  transition:transform var(--dur-flap) var(--ease-swing) var(--t-flap);
+  transition:transform var(--dur-close-flap) var(--ease-swing) var(--t-close-flap);
   pointer-events:none;
 }
+/* OPEN pose + open timing: the flap leads */
 body.is-opening .flap,body.is-open .flap{
-  transform:translateZ(-6px) translateY(115%) rotateX(180deg);
+  transform:translateZ(-6px) translateY(0%) rotateX(180deg);
+  transition:transform var(--dur-flap) var(--ease-swing) var(--t-flap);
 }
 .flap__face{position:absolute;inset:0;backface-visibility:hidden}
 .flap__face svg{width:100%;height:100%;display:block}
@@ -342,12 +389,23 @@ body.is-opening .seal-idle{animation:sealPop 280ms var(--ease-pop) both}
 
 /* the halves only part once the bulge has finished */
 .seal__half{
+  /* CLOSE: the wax re-forms once the flap has swung shut */
+  transition:
+    transform .5s cubic-bezier(.3,.9,.35,1) var(--t-close-seal),
+    opacity .35s ease var(--t-close-seal);
+}
+body.is-opening .seal__half--l{
+  transform:translate(-46%,26%) rotate(-24deg);opacity:0;
   transition:
     transform var(--dur-seal) cubic-bezier(.3,.9,.35,1) var(--t-seal),
     opacity .3s ease calc(var(--t-seal) + 150ms);
 }
-body.is-opening .seal__half--l{transform:translate(-46%,26%) rotate(-24deg);opacity:0}
-body.is-opening .seal__half--r{transform:translate(46%,22%) rotate(22deg);opacity:0}
+body.is-opening .seal__half--r{
+  transform:translate(46%,22%) rotate(22deg);opacity:0;
+  transition:
+    transform var(--dur-seal) cubic-bezier(.3,.9,.35,1) var(--t-seal),
+    opacity .3s ease calc(var(--t-seal) + 150ms);
+}
 
 .envelope-hit{
   position:absolute;top:-12%;left:-8%;width:116%;height:126%;
@@ -695,10 +753,16 @@ body.is-settled .envelope-float{will-change:auto}
               </svg>
             </div>
             <div class="flap__face flap__face--back">
+              <!-- This face carries its own rotateX(180deg) so the flip
+                   shows it correctly. That means the parent's 180deg is
+                   un-mirrored here and the net effect is a pure upward
+                   translation, so the triangle must be drawn APEX-UP.
+                   Drawn apex-down (like the front) the opened flap came
+                   out inverted, point down at the envelope. -->
               <svg viewBox="0 0 400 158" fill="none">
-                <path d="M0 0 H400 L200 158 Z" fill="var(--cream-2)"/>
-                <path d="M0 0 H400 L200 158 Z" stroke="var(--burgundy)" stroke-width="1.4" opacity=".55"/>
-                <path d="M22 10 L200 148 L378 10" stroke="var(--burgundy)" stroke-width="1.1" opacity=".22"/>
+                <path d="M0 158 L200 0 L400 158 Z" fill="var(--paper-shade)"/>
+                <path d="M0 158 L200 0 L400 158 Z" stroke="var(--burgundy)" stroke-width="1.7" opacity=".8"/>
+                <path d="M22 148 L200 10 L378 148" stroke="var(--burgundy)" stroke-width="1.1" opacity=".3"/>
               </svg>
             </div>
           </div>
@@ -1054,12 +1118,23 @@ body.is-settled .envelope-float{will-change:auto}
   }
 
   function close(){
-    if (state === 'closed') return;
-    state = 'closed';
+    if (state !== 'open') return;
+    // a real third state: the close sequence has its own order and must
+    // not be interrupted, or the flap snaps while the letter is mid-slide
+    state = 'closing';
     root.classList.remove('is-open', 'is-opening', 'is-settled');
     seal.classList.remove('is-breaking');
     openBtn.focus({ preventScroll: true });
-    scheduleFit();
+    // the flap is the last thing to land
+    const done = msVar('--t-close-flap', 600) + msVar('--dur-close-flap', 1200) + 120;
+    setTimeout(() => {
+      state = 'closed';
+      // reset the letter's scroll here, where the scene is fully hidden, so
+      // reopening never shows a scrolled position flashing past
+      const scroller = document.getElementById('sceneLetter');
+      if (scroller) scroller.scrollTop = 0;
+      scheduleFit();
+    }, done);
   }
 
   openBtn.addEventListener('click', open);

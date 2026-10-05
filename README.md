@@ -25,36 +25,50 @@ it, and the letter reveals itself.
 
 ## Animation notes
 
-The whole sequence is driven by variables at the top of the `<style>` block.
-Each phase begins as the previous one settles, so nothing competes for the
-compositor at the same moment:
+The whole sequence is driven by variables at the top of the `<style>` block,
+and is matched to a reference clip of the envelope opening and closing:
 
 ```css
---t-seal:    200ms;   /* wax cracks                        */
---t-flap:    660ms;   /* flap swings up and folds behind   */
---t-letter: 1380ms;   /* letter slides out                 */
---t-exit:   2200ms;   /* envelope leaves, red blooms in    */
+--t-flap:    150ms;    /* flap starts almost at once        */
+--dur-flap: 1000ms;    /*   ~1.0s                           */
+--t-letter:  950ms;    /* letter follows as the flap lands  */
+--dur-letter: 700ms;   /*   ~0.7s                           */
+--t-exit:   2000ms;    /* short hold, then the big reveal   */
 ```
 
-`--t-exit` is also read by the script, so changing it keeps JS and CSS in sync.
+**Open and close are a different order, not a rewind.** The flap leads on the
+way out and the letter leads on the way back:
 
-Two geometry details are load-bearing, and both were bugs once:
+- OPEN: flap swings up (~1.0s), then the letter rises out of the envelope.
+- CLOSE: the letter drops back in (~0.9s), then the flap swings shut (~1.2s).
 
-- The flap rotates to 180° **and** translates down by 115% of its own height,
-  so the fold-back finishes inside the envelope's silhouette where the back
-  panel hides it. Without that tuck the opened flap stood up above the top
-  edge; because the flap is 100% of the envelope width against the letter's
-  86%, its edges showed as stray cream triangles down both sides of the letter
-  and under its bottom.
-- The letter sheet occupies 6%–94% of the envelope's height. It used to be
-  112% tall, which left about 43px of pink poking out below the bottom edge.
+This works because the open timings live on the `.is-opening` / `.is-open`
+rules while the close timings live on the **base** rules — when a state class is
+removed, the transition that runs is the one on the element's *new* style.
 
-Both transform lists on the flap carry the same three functions
-(`translateZ() translateY() rotateX()`), so the browser interpolates them
-function-by-function rather than via a matrix decomposition.
+The letter only rises about half way and stops, still part in the mouth of the
+envelope, exactly as in the reference. It does not come fully out.
 
-The handwriting fades out as soon as the envelope starts to open, so the
-letter rises into clear space rather than over the text.
+Four details here are load-bearing, and every one of them was a bug first:
+
+- The flap's transform list must carry the **same three functions** as the
+  closed pose (`translateZ() translateY() rotateX()`), or the browser falls
+  back to matrix decomposition instead of interpolating function-by-function.
+- The opened flap must **not** tuck behind the envelope. It did once, to hide
+  wedges showing either side of the letter — but that only looked wrong while
+  the letter slid almost fully out and exposed the flap's wide base. With the
+  letter stopping half way, its own body covers the flap's middle and only the
+  two small tips flank it, as in the reference.
+- The flap's back face carries its own `rotateX(180deg)`, so the parent's 180°
+  is *un-mirrored* there and the net effect is a pure upward translation. Its
+  triangle therefore has to be drawn **apex-up**; drawn apex-down like the
+  front face, the opened flap renders inverted, pointing down at the envelope.
+- The flap's inner face is deliberately a warmer tan (`--paper-shade`). At the
+  original `#F1ECE0` it differed from the page by only 17/255, so the flap
+  rendered correctly but was invisible in practice.
+
+`close()` is a real third state. It cannot be interrupted, or the flap snaps
+while the letter is mid-slide.
 
 ## Layout notes
 
