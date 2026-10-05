@@ -41,22 +41,24 @@
 
   /* ------------------------------------------------------------
      OPENING TIMELINE — one place to retune the whole sequence.
-     Each phase starts as the previous one settles, so nothing
-     competes for the compositor at the same moment.
+     Each phase begins only once the previous has finished, so no
+     two things compete for the compositor at the same moment.
      ------------------------------------------------------------ */
   --t-seal:    200ms;   /* wax cracks                        */
-  --t-flap:    640ms;   /* flap swings up                    */
-  --t-letter: 1300ms;   /* letter slides out                 */
-  --t-exit:   2180ms;   /* envelope leaves, red blooms in    */
+  --t-flap:    660ms;   /* flap swings up (seal already gone) */
+  --t-letter: 1380ms;   /* letter slides out (flap has landed) */
+  --t-exit:   2200ms;   /* envelope leaves, red blooms in     */
 
   --dur-shake:  340ms;
-  --dur-seal:   520ms;
-  --dur-flap:   760ms;
-  --dur-letter: 820ms;
+  --dur-seal:   480ms;
+  --dur-flap:   700ms;
+  --dur-letter: 760ms;
 
-  --ease-soft:  cubic-bezier(.42,0,.58,1);   /* symmetric, no overshoot */
   --ease-glide: cubic-bezier(.22,.85,.3,1);
   --ease-pop:   cubic-bezier(.34,1.28,.5,1);
+  /* flap: prompt start, long settle — a pure ease-in-out leaves the
+     first third of the swing looking like dead air */
+  --ease-swing: cubic-bezier(.34,.06,.26,1);
 
   /* fallback only — fitEnvelope() replaces this with px so the
      envelope scene never needs scrolling */
@@ -127,6 +129,11 @@ body.is-open .bloom{opacity:1;transform:scale(4.6)}
 
 .hearts{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;transition:opacity .7s ease}
 body.is-open .hearts{opacity:0}
+/* stand the ambient loops down while the opening plays: ten extra
+   composited layers competing for the same frames buys nothing,
+   and they are about to be faded out anyway */
+body.is-opening .fheart,
+body.is-opening .hint span{animation-play-state:paused}
 .fheart{
   position:absolute;bottom:-12vh;
   color:var(--seal-m);opacity:0;
@@ -251,8 +258,10 @@ body.is-opening .envelope-float{animation:shake var(--dur-shake) cubic-bezier(.3
 }
 body.is-opening .letter-sheet{transform:translateZ(-4px) translateY(-112%) rotate(-2.2deg)}
 body.is-open .letter-sheet{opacity:0}
-.ls-heart{width:40%;color:var(--dec);opacity:.9;overflow:visible}
-.ls-heart path{animation:beat 1.6s ease-in-out 1.1s infinite}
+/* The beat animates the outermost <svg>, which the browser composites.
+   On an inner <path> it repainted the whole svg every frame — right
+   while the letter was sliding out in 3D. */
+.ls-heart{width:40%;color:var(--dec);opacity:.9;overflow:visible;animation:beat 1.6s ease-in-out infinite}
 @keyframes beat{0%,100%{transform:scale(1)}22%{transform:scale(1.13)}38%{transform:scale(.97)}}
 
 /* Flap rotates to exactly 180deg on a symmetric ease. The previous
@@ -264,34 +273,48 @@ body.is-open .letter-sheet{opacity:0}
   transform-origin:50% 0%;
   transform:translateZ(5px) rotateX(0deg);
   will-change:transform;
-  transition:transform var(--dur-flap) var(--ease-soft) var(--t-flap);
+  transition:transform var(--dur-flap) var(--ease-swing) var(--t-flap);
   pointer-events:none;
 }
 body.is-opening .flap,body.is-open .flap{transform:translateZ(-6px) rotateX(180deg)}
 .flap__face{position:absolute;inset:0;backface-visibility:hidden}
 .flap__face svg{width:100%;height:100%;display:block}
-.flap__face--front{filter:drop-shadow(0 8px 14px rgba(90,40,30,.16))}
+/* no drop-shadow on the rotating face: a filter on a 3D-transformed
+   element re-renders on every frame of the swing */
 .flap__face--back{transform:rotateX(180deg)}
 
+/* Soft shadow as its own static element. Previously this was
+   filter:drop-shadow() on .seal, and because the seal pulse animated
+   *inside* it the filter re-rendered on every frame, forever. */
+.seal-shadow{
+  position:absolute;left:50%;top:56%;
+  width:27%;padding-top:23%;
+  /* nudged down so it reads as a cast shadow, not a halo */
+  transform:translate(-50%,-46%) translateZ(7px);
+  border-radius:50%;
+  background:radial-gradient(ellipse at 50% 70%,
+    rgba(90,20,20,.50) 0%,
+    rgba(90,20,20,.22) 46%,
+    rgba(90,20,20,0) 72%);
+  pointer-events:none;
+}
 .seal{
   position:absolute;left:50%;top:56%;
   width:23%;
   transform:translate(-50%,-50%) translateZ(8px);
-  filter:drop-shadow(0 6px 10px rgba(90,20,20,.4));
   pointer-events:none;
 }
 .seal svg{width:100%;height:auto;display:block;overflow:visible}
-.seal-idle{animation:sealPulse 3.4s ease-in-out infinite}
-@keyframes sealPulse{0%,100%{scale:1}50%{scale:1.045}}
-body.is-opening .seal-idle{animation:sealPop 300ms var(--ease-pop) both}
-@keyframes sealPop{0%{scale:1}50%{scale:1.13}100%{scale:1}}
-.envelope-wrap:hover .seal-idle{animation-duration:1.5s}
+/* one-shot only — the old infinite pulse forced a filter re-render
+   on every frame of the whole page, including the opening */
+body.is-opening .seal-idle{animation:sealPop 280ms var(--ease-pop) both}
+@keyframes sealPop{0%{scale:1}50%{scale:1.12}100%{scale:1}}
 
 /* the halves only part once the bulge has finished */
 .seal__half{
   transition:
     transform var(--dur-seal) cubic-bezier(.3,.9,.35,1) var(--t-seal),
-    opacity .42s ease calc(var(--t-seal) + 160ms);
+    opacity .3s ease calc(var(--t-seal) + 150ms);
 }
 body.is-opening .seal__half--l{transform:translate(-46%,26%) rotate(-24deg);opacity:0}
 body.is-opening .seal__half--r{transform:translate(46%,22%) rotate(22deg);opacity:0}
@@ -362,8 +385,12 @@ body.is-opening .hint,body.is-open .hint{opacity:0}
   container-type:inline-size;
   opacity:0;transform:translateY(18px);
   will-change:transform,opacity;
-  transition:opacity .6s ease .12s, transform .7s var(--ease-glide) .12s;
+  transition:opacity .6s ease .2s, transform .7s var(--ease-glide) .2s;
 }
+/* The card now fades rather than scales: scaling an element that
+   carries a large blurred box-shadow makes the browser re-rasterise
+   the shadow as the scale changes. It also waits for the bloom to
+   finish rasterising so two heavy paints don't land on one frame. */
 body.is-open .card{opacity:1;transform:none}
 
 /* ------------------------------------------------------------
@@ -466,10 +493,10 @@ body.is-open .card-sign{
   font-family:var(--font-type);
   font-size:11px;letter-spacing:.24em;text-transform:uppercase;
   color:var(--cream-w);
-  background:rgba(255,240,236,.14);
-  border:1px solid rgba(255,240,236,.5);
+  background:rgba(255,240,236,.2);
+  border:1px solid rgba(255,240,236,.55);
   border-radius:999px;padding:11px 22px;
-  cursor:pointer;backdrop-filter:blur(4px);
+  cursor:pointer;
   opacity:0;
   transition:opacity .3s ease, background .25s ease;
 }
@@ -631,6 +658,7 @@ body.is-settled .envelope-float{will-change:auto}
           </div>
 
           <!-- wax seal -->
+          <div class="seal-shadow" aria-hidden="true"></div>
           <div class="seal" id="seal" aria-hidden="true">
             <div class="seal-idle">
               <svg viewBox="-56 -54 112 108">

@@ -21,3 +21,6 @@ npm-debug.log*
 # Local env files
 .env
 .env.local
+# Local screen recordings / scratch media
+animation.mp4
+*.mp4

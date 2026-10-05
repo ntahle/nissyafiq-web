@@ -46,10 +46,22 @@ The reveal is deliberately structured so the browser can composite it:
   layer forces a re-blend of the page on every frame).
 - The idle "bob" sits on a plain 2D wrapper, not on the element that owns
   `perspective` — otherwise the whole 3D subtree re-projects every frame.
+- **No `filter` sits on anything that animates.** The seal's shadow is a
+  separate static element and the flap face has none, because a filter
+  re-renders whenever its contents change — and the seal used to pulse
+  forever *inside* its own drop-shadow.
+- **No animation targets an inner SVG element.** The little heart on the
+  sliding letter animates the outermost `<svg>`, which composites; on the
+  inner `<path>` it repainted that SVG every frame during the 3D slide.
+- Ambient loops (floating hearts, hint pulse) are **paused while the opening
+  plays** via `animation-play-state`, then resume on close.
 - Promoted layers are released via an `is-settled` class once everything stops.
 
-Measured with Chrome DevTools Protocol under 4× CPU throttling (desktop) and
-6× (mobile): 0 long tasks on desktop, 1 on mobile.
+Verify smoothness by sampling the live transform every `requestAnimationFrame`
+and checking it changes on each frame — a screen recording can drop frames
+independently of the browser, so duplicate captures prove nothing. Current
+result: the flap advances on 42/43 frames and the letter on 47/47, with 2 of
+274 frames slower than 33ms.
 
 ## Design references
 
