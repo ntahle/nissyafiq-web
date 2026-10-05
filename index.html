@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A Letter For You</title>
+<meta name="description" content="A little envelope, waiting to be opened.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='78' font-size='88'%3E%E2%9D%A4%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Special+Elite&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   PALETTE — sampled from the reference artwork
+   ============================================================ */
+:root{
+  --cream:#FAF8F1;      /* stage ground (envelope scene) */
+  --paper:#FFFCF6;      /* envelope paper                 */
+  --cream-2:#F1ECE0;    /* envelope interior              */
+  --burgundy:#7A2D28;   /* fold lines + type              */
+  --ink:#4E1F1D;
+
+  --seal-d:#6E1F21;
+  --seal-m:#A43130;
+  --seal-l:#C14945;
+
+  --red:#E24140;        /* stage ground (letter scene)    */
+  --pink:#F78FAF;       /* card                           */
+  --pink-d:#EC7B9D;
+  --blush:#F6DCD6;      /* inner letter panel             */
+  --dec:#E63338;        /* border red                     */
+  --dec-d:#B93034;
+  --cream-w:#FFF0EC;    /* border white                   */
+  --body-ink:#B94748;   /* small body copy                */
+
+  --font-script:'Caveat','Segoe Script','Bradley Hand',cursive;
+  --font-type:'Special Elite','Courier New',monospace;
+  --font-serif:'Playfair Display',Georgia,'Times New Roman',serif;
+  --font-body:'Lora',Georgia,serif;
+
+  --env-w:min(80vw,420px);
+  --ease-out:cubic-bezier(.22,.9,.24,1);
+  --ease-back:cubic-bezier(.34,1.36,.5,1);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--cream);
+  color:var(--ink);
+  font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ============================================================
+   STAGE SHELL
+   ============================================================ */
+.stage{
+  position:relative;
+  min-height:100svh;
+  display:grid;
+  place-items:center;
+  overflow-x:hidden;
+  overflow-y:auto;
+  background:var(--cream);
+  transition:background-color 1.1s ease;
+}
+/* the state class lives on <body> so it can also reach .grain,
+   which is a sibling of .stage */
+body.is-open .stage{background:var(--red)}
+
+.grain{
+  position:fixed;inset:0;z-index:60;pointer-events:none;
+  width:100%;height:100%;
+  opacity:.055;mix-blend-mode:multiply;
+  transition:opacity 1s ease;
+}
+body.is-open .grain{opacity:.035}
+
+.bloom{
+  position:absolute;z-index:1;pointer-events:none;
+  width:130vmax;height:130vmax;left:50%;top:50%;
+  transform:translate(-50%,-50%) scale(.06);
+  background:radial-gradient(circle,
+    rgba(226,65,64,.9) 0%,
+    rgba(226,65,64,.55) 26%,
+    rgba(226,65,64,0) 58%);
+  opacity:0;
+  transition:opacity 1s ease, transform 1.25s var(--ease-out);
+}
+.is-open .bloom{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+/* two vignettes so the tone change cross-fades instead of snapping */
+.stage::before,.stage::after{
+  content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+  transition:opacity 1.1s ease;
+}
+.stage::before{
+  background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(0,0,0,.10) 100%);
+}
+.stage::after{
+  background:radial-gradient(ellipse at 50% 45%,transparent 46%,rgba(120,20,20,.30) 100%);
+  opacity:0;
+}
+.is-open .stage::before{opacity:0}
+.is-open .stage::after{opacity:1}
+
+.hearts{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;transition:opacity .8s ease}
+.is-open .hearts{opacity:0}
+.fheart{
+  position:absolute;bottom:-12vh;
+  color:var(--seal-m);opacity:0;
+  animation:drift linear infinite;
+  will-change:transform,opacity;
+}
+@keyframes drift{
+  0%{opacity:0;transform:translate3d(0,0,0) rotate(0deg) scale(.7)}
+  12%{opacity:.5}
+  85%{opacity:.3}
+  100%{opacity:0;transform:translate3d(var(--dx,20px),-118vh,0) rotate(var(--rot,220deg)) scale(1.05)}
+}
+
+/* ============================================================
+   SCENES
+   ============================================================ */
+.scene{position:relative;z-index:5;width:100%;padding:clamp(18px,4vh,40px) 16px}
+
+.scene--envelope{
+  display:flex;flex-direction:column;align-items:center;
+  gap:clamp(12px,2.6vh,28px);
+  transition:opacity .5s ease, transform .7s var(--ease-out), filter .5s ease;
+}
+.is-open .scene--envelope{opacity:0;transform:scale(.9) translateY(-4vh);filter:blur(6px);pointer-events:none}
+
+.scene--letter{
+  position:fixed;inset:0;
+  display:grid;place-items:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .8s ease;
+}
+.is-open .scene--letter{opacity:1;pointer-events:auto}
+
+/* ============================================================
+   SCENE 1 — ENVELOPE
+   ============================================================ */
+.scene--envelope > *{opacity:0;animation:riseIn .9s var(--ease-out) forwards}
+.script-top{animation-delay:.25s !important}
+.envelope-wrap{animation-delay:.45s !important}
+.hint{animation-delay:.75s !important}
+.signature{animation-delay:.95s !important}
+
+@keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.script-top{
+  margin:0;text-align:center;
+  font-family:var(--font-script);
+  font-weight:600;
+  font-size:clamp(30px,6.4vw,50px);
+  line-height:1.16;
+  color:var(--burgundy);
+  text-shadow:0 1px 0 rgba(255,255,255,.55);
+  transform:rotate(-1.1deg);
+}
+.script-top span{display:block;opacity:0;animation:riseIn .9s var(--ease-out) forwards}
+.script-top span:nth-child(1){animation-delay:.25s}
+.script-top span:nth-child(2){animation-delay:.45s}
+.script-top span:nth-child(3){animation-delay:.65s}
+
+/* reserves room above the envelope for the flap to swing open */
+.envelope-wrap{position:relative;display:grid;justify-items:center;padding-top:calc(var(--env-w) * .395)}
+
+.envelope{
+  position:relative;
+  width:var(--env-w);
+  aspect-ratio:400/230;
+  perspective:1400px;
+  transform-style:preserve-3d;
+  animation:bob 5.5s ease-in-out infinite;
+}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-.35deg)}50%{transform:translateY(-9px) rotate(.35deg)}}
+
+.is-opening .envelope{animation:shake .6s cubic-bezier(.36,.07,.19,.97) .05s both}
+@keyframes shake{
+  0%,100%{transform:translate(0,0) rotate(0)}
+  15%{transform:translate(-5px,1px) rotate(-.9deg)}
+  32%{transform:translate(5px,-1px) rotate(.9deg)}
+  50%{transform:translate(-4px,1px) rotate(-.6deg)}
+  70%{transform:translate(4px,0) rotate(.5deg)}
+  86%{transform:translate(-2px,0) rotate(-.2deg)}
+}
+
+/* --- 3D layers: back(0) < letter(-4) < front(3), flap 5 -> -6 --- */
+.env-back,.env-front{position:absolute;inset:0}
+.env-back{transform:translateZ(0)}
+.env-front{transform:translateZ(3px);pointer-events:none}
+.env-back svg,.env-front svg{width:100%;height:100%;display:block}
+.env-back svg{filter:drop-shadow(0 16px 24px rgba(90,40,30,.17))}
+.env-front svg{filter:drop-shadow(0 10px 18px rgba(90,40,30,.14))}
+
+.letter-sheet{
+  position:absolute;left:7%;width:86%;top:6%;height:112%;
+  transform:translateZ(-4px);
+  transform-origin:50% 20%;
+  border-radius:3px;
+  background:linear-gradient(170deg,#F9A2BC 0%,var(--pink) 46%,var(--pink-d) 100%);
+  box-shadow:0 10px 22px rgba(120,30,40,.22);
+  display:grid;place-items:center;
+  transition:transform 1s var(--ease-out) .95s, opacity .4s ease 1.6s;
+}
+.is-opening .letter-sheet{transform:translateZ(-4px) translateY(-112%) rotate(-2.5deg)}
+.is-open .letter-sheet{opacity:0}
+.ls-heart{width:40%;color:var(--dec);opacity:.9;overflow:visible}
+.ls-heart path{animation:beat 1.6s ease-in-out .9s infinite}
+@keyframes beat{0%,100%{transform:scale(1)}22%{transform:scale(1.13)}38%{transform:scale(.97)}}
+
+.flap{
+  position:absolute;left:0;width:100%;top:0;height:68.7%;
+  transform-style:preserve-3d;
+  transform-origin:50% 0%;
+  transform:translateZ(5px) rotateX(0deg);
+  transition:transform .85s var(--ease-back) .45s;
+  pointer-events:none;
+}
+/* once open the flap tucks BEHIND the rising letter */
+.is-opening .flap,.is-open .flap{transform:translateZ(-6px) rotateX(179deg)}
+.flap__face{position:absolute;inset:0;backface-visibility:hidden}
+.flap__face svg{width:100%;height:100%;display:block}
+.flap__face--front{filter:drop-shadow(0 8px 14px rgba(90,40,30,.16))}
+.flap__face--back{transform:rotateX(180deg)}
+
+.seal{
+  position:absolute;left:50%;top:56%;
+  width:23%;
+  transform:translate(-50%,-50%) translateZ(8px);
+  filter:drop-shadow(0 6px 10px rgba(90,20,20,.4));
+  pointer-events:none;
+}
+.seal svg{width:100%;height:auto;display:block;overflow:visible}
+.seal-idle{animation:sealPulse 3.4s ease-in-out infinite}
+@keyframes sealPulse{0%,100%{scale:1}50%{scale:1.045)}}
+.seal__half{transition:transform .8s cubic-bezier(.3,1.1,.4,1) .05s, opacity .5s ease .5s}
+.is-opening .seal__half--l{transform:translate(-46%,26%) rotate(-26deg);opacity:0}
+.is-opening .seal__half--r{transform:translate(46%,22%) rotate(24deg);opacity:0}
+.seal.is-breaking{animation:sealPop .5s cubic-bezier(.34,1.5,.5,1) both}
+@keyframes sealPop{0%{scale:1}45%{scale:1.17}100%{scale:1}}
+.envelope:hover .seal-idle{animation-duration:1.5s}
+
+.envelope-hit{
+  position:absolute;top:-12%;left:-8%;width:116%;height:126%;
+  z-index:12;
+  background:none;border:0;padding:0;margin:0;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.envelope-hit:focus-visible{outline:none}
+.env-focus{
+  position:absolute;top:22%;left:8%;width:84%;height:74%;
+  border-radius:6px;pointer-events:none;
+  box-shadow:0 0 0 3px rgba(164,49,48,.6);
+  opacity:0;transition:opacity .2s;
+}
+.envelope-hit:focus-visible ~ .env-focus{opacity:1}
+
+.hint{
+  margin:0;text-align:center;
+  font-family:var(--font-type);
+  font-size:clamp(10px,1.3vw,12.5px);
+  letter-spacing:.34em;text-transform:uppercase;
+  color:var(--burgundy);opacity:.72;
+}
+.hint span{display:inline-block;animation:hintPulse 2.4s ease-in-out infinite}
+.hint::after{content:'↓';display:block;margin-top:6px;letter-spacing:0;font-size:15px;opacity:.7}
+@keyframes hintPulse{0%,100%{opacity:.5;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.is-opening .hint,.is-open .hint{opacity:0}
+
+.signature{margin:0;text-align:center;line-height:1}
+.signature__love{
+  display:block;margin-bottom:.7em;
+  font-family:var(--font-type);
+  font-size:clamp(10px,1.5vw,13px);
+  letter-spacing:.42em;text-indent:.42em;
+  color:var(--burgundy);opacity:.8;
+}
+.signature__name{
+  display:block;
+  font-family:var(--font-type);
+  font-size:clamp(19px,3.6vw,30px);
+  letter-spacing:.3em;text-indent:.3em;
+  color:var(--burgundy);
+}
+
+/* ============================================================
+   SCENE 2 — THE LETTER CARD
+   ============================================================ */
+.letter-halo{
+  position:absolute;top:50%;left:50%;
+  width:min(120vw,900px);aspect-ratio:1;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(255,180,195,.28),transparent 62%);
+  filter:blur(10px);pointer-events:none;
+}
+
+.card{
+  position:relative;
+  width:min(90vw,420px);
+  aspect-ratio:320/452;
+  background:var(--pink);
+  border-radius:2px;
+  box-shadow:0 22px 50px rgba(120,25,35,.42), 0 4px 10px rgba(120,25,35,.26);
+  container-type:inline-size;
+  opacity:0;transform:translateY(26px) scale(.9);
+  transition:opacity .7s ease .25s, transform .9s var(--ease-back) .25s;
+}
+.is-open .card{opacity:1;transform:none}
+
+.card-decor{position:absolute;inset:0;width:100%;height:100%;display:block;border-radius:2px;overflow:hidden}
+/* CSS transform here overrides the SVG transform attribute, so every
+   decoration is POSITIONED by its parent <g> and only scaled here. */
+.card-decor .p-in{
+  opacity:0;
+  transform-box:fill-box;transform-origin:center;
+  transform:scale(.4);
+}
+.is-open .card-decor .p-in{animation:pop .6s var(--ease-back) forwards;animation-delay:var(--d,0ms)}
+@keyframes pop{to{opacity:1;transform:scale(1)}}
+
+.card-panel{
+  position:absolute;
+  left:16.56%;top:16.37%;width:66.875%;height:67.04%;
+  background:var(--blush);
+  padding:5.6% 7.2% 4.4%;
+  display:flex;flex-direction:column;
+  overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:rgba(230,51,56,.35) transparent;
+}
+.card-panel::-webkit-scrollbar{width:5px}
+.card-panel::-webkit-scrollbar-thumb{background:rgba(230,51,56,.3);border-radius:9px}
+
+.card-greeting{
+  margin:0 0 .5em;flex:none;
+  font-family:var(--font-serif);font-weight:900;
+  font-size:19px;                         /* fallback */
+  font-size:clamp(19px,7.1cqw,31px);      /* scales with card width */
+  line-height:1.12;color:var(--dec);
+  opacity:0;transform:translateY(10px);
+  transition:opacity .7s ease .45s, transform .7s var(--ease-out) .45s;
+}
+.is-open .card-greeting{opacity:1;transform:none}
+
+.card-body{
+  font-size:12px;                         /* fallback */
+  font-size:clamp(12px,3cqw,13.6px);      /* scales with card width */
+  line-height:1.78;color:var(--body-ink);
+}
+.card-body p{margin:0 0 .95em}
+.card-body p:last-child{margin-bottom:0}
+.card-body p{
+  opacity:0;transform:translateY(9px);
+  transition:opacity .7s ease, transform .7s var(--ease-out);
+  transition-delay:calc(var(--i,0) * 150ms + 650ms);
+}
+.is-open .card-body p{opacity:1;transform:none}
+
+.card-sign{
+  margin:auto 0 0;padding-top:1.1em;flex:none;
+  text-align:right;
+  font-family:var(--font-body);
+  font-size:11px;
+  font-size:clamp(10.5px,2.5cqw,12px);
+  line-height:1.5;color:var(--body-ink);
+  opacity:0;transform:translateY(9px);
+  transition:opacity .7s ease, transform .7s var(--ease-out);
+  transition-delay:calc(var(--i,3) * 150ms + 650ms);
+}
+.is-open .card-sign{opacity:1;transform:none}
+.card-sign span{display:block}
+.card-sign strong{
+  display:block;margin-top:.18em;
+  font-family:var(--font-serif);font-weight:700;
+  font-size:clamp(13px,3.3cqw,15.5px);
+  color:var(--dec);
+}
+.card-sign em{display:block;margin-top:.1em;font-style:italic;color:var(--dec)}
+
+.replay{
+  position:absolute;bottom:clamp(14px,3.5vh,30px);left:50%;
+  transform:translateX(-50%);
+  z-index:20;
+  font-family:var(--font-type);
+  font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--cream-w);
+  background:rgba(255,240,236,.14);
+  border:1px solid rgba(255,240,236,.5);
+  border-radius:999px;padding:11px 22px;
+  cursor:pointer;backdrop-filter:blur(4px);
+  opacity:0;
+  transition:opacity .6s ease 1.5s, background .25s ease;
+}
+.is-open .replay{opacity:1}
+.replay:hover{background:rgba(255,240,236,.26)}
+.replay:focus-visible{outline:2px solid var(--cream-w);outline-offset:3px}
+
+/* ============================================================
+   PARTICLES
+   ============================================================ */
+.burst{position:fixed;inset:0;z-index:50;pointer-events:none;overflow:hidden}
+.shard{
+  position:absolute;display:block;
+  animation:fly 1.5s cubic-bezier(.15,.6,.4,1) forwards;
+}
+@keyframes fly{
+  0%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}
+  70%{opacity:1}
+  100%{opacity:0;transform:translate(var(--tx),var(--ty)) rotate(var(--r)) scale(.35)}
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:520px){
+  :root{--env-w:min(86vw,350px)}
+  .scene{gap:12px}
+  .signature__name{letter-spacing:.24em;text-indent:.24em}
+  .card{width:min(92vw,400px)}
+  .card-panel{padding:5.2% 6.4% 4%}
+}
+@media (max-height:700px){
+  :root{--env-w:min(72vw,330px)}
+  .scene--envelope{gap:9px}
+  .script-top{font-size:clamp(24px,5vw,36px)}
+  .letter-halo{width:min(110vw,700px)}
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    transition-delay:0ms !important;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="burst" id="burst" aria-hidden="true"></div>
+
+<svg class="grain" aria-hidden="true" preserveAspectRatio="none">
+  <filter id="grainFilter">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch"/>
+    <feColorMatrix type="saturate" values="0"/>
+  </filter>
+  <rect width="100%" height="100%" filter="url(#grainFilter)"/>
+</svg>
+
+<main class="stage" id="stage">
+
+  <div class="bloom" aria-hidden="true"></div>
+  <div class="hearts" id="hearts" aria-hidden="true"></div>
+
+  <!-- ================= SCENE 1 : ENVELOPE ================= -->
+  <section class="scene scene--envelope" id="sceneEnvelope">
+
+    <p class="script-top">
+      <span>the love you</span>
+      <span>gave was never</span>
+      <span>a waste.</span>
+    </p>
+
+    <div class="envelope-wrap">
+
+      <div class="envelope" id="envelope">
+
+        <!-- back -->
+        <div class="env-back" aria-hidden="true">
+          <svg viewBox="0 0 400 230" fill="none">
+            <rect x="1" y="1" width="398" height="228" rx="5" fill="var(--paper)"/>
+            <rect x="1" y="1" width="398" height="228" rx="5" stroke="var(--burgundy)" stroke-width="1.4" opacity=".85"/>
+            <path d="M1 1 L200 118 L399 1" stroke="var(--burgundy)" stroke-width="1.2" opacity=".35"/>
+            <path d="M1 229 L200 118 L399 229" stroke="var(--burgundy)" stroke-width="1.2" opacity=".2"/>
+          </svg>
+        </div>
+
+        <!-- letter, tucked inside (behind the back panel) -->
+        <div class="letter-sheet" aria-hidden="true">
+          <svg class="ls-heart" viewBox="-44 -42 88 84" fill="currentColor">
+            <path d="M0 42C0 42-44 12-44-15c0-17 13-27 27-27 9 0 15 7 17 14 2-7 8-14 17-14 14 0 27 10 27 27 0 27-44 57-44 57Z"/>
+          </svg>
+        </div>
+
+        <!-- front pocket -->
+        <div class="env-front" aria-hidden="true">
+          <svg viewBox="0 0 400 230" fill="none">
+            <path d="M0 230 V88 L200 158 L400 88 V230 Z" fill="var(--paper)"/>
+            <path d="M0 230 V88 L200 158 L400 88 V230 Z" stroke="var(--burgundy)" stroke-width="1.4" opacity=".85"/>
+            <path d="M0 230 L200 158 L400 230" stroke="var(--burgundy)" stroke-width="1.2" opacity=".5"/>
+          </svg>
+        </div>
+
+        <!-- flap (two-sided) -->
+        <div class="flap" aria-hidden="true">
+          <div class="flap__face flap__face--front">
+            <svg viewBox="0 0 400 158" fill="none">
+              <path d="M0 0 H400 L200 158 Z" fill="var(--paper)"/>
+              <path d="M0 0 H400 L200 158 Z" stroke="var(--burgundy)" stroke-width="1.4" opacity=".85"/>
+            </svg>
+          </div>
+          <div class="flap__face flap__face--back">
+            <svg viewBox="0 0 400 158" fill="none">
+              <path d="M0 0 H400 L200 158 Z" fill="var(--cream-2)"/>
+              <path d="M0 0 H400 L200 158 Z" stroke="var(--burgundy)" stroke-width="1.4" opacity=".55"/>
+              <path d="M22 10 L200 148 L378 10" stroke="var(--burgundy)" stroke-width="1.1" opacity=".22"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- wax seal -->
+        <div class="seal" id="seal" aria-hidden="true">
+          <div class="seal-idle">
+            <svg viewBox="-56 -54 112 108">
+              <defs>
+                <radialGradient id="waxG" cx="36%" cy="30%" r="74%">
+                  <stop offset="0%" stop-color="#CE5350"/>
+                  <stop offset="42%" stop-color="var(--seal-m)"/>
+                  <stop offset="100%" stop-color="var(--seal-d)"/>
+                </radialGradient>
+                <clipPath id="halfL"><rect x="-56" y="-54" width="56" height="108"/></clipPath>
+                <clipPath id="halfR"><rect x="0" y="-54" width="56" height="108"/></clipPath>
+                <g id="wax">
+                  <path d="M0 44C0 44-46 13-46-16c0-18 14-28 28-28 9.5 0 16 7.5 18 15 2-7.5 8.5-15 18-15 14 0 28 10 28 28 0 29-46 60-46 60Z" fill="url(#waxG)"/>
+                  <path d="M0 33C0 33-35 8-35-13c0-13 10-20 21-20 7 0 12 5.5 13.5 11 1.5-5.5 6.5-11 13.5-11 11 0 21 7 21 20 0 21-35 46-35 46Z" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2.4"/>
+                  <ellipse cx="-15" cy="-22" rx="11" ry="7.5" fill="rgba(255,255,255,.28)" transform="rotate(-28 -15 -22)"/>
+                </g>
+              </defs>
+              <g clip-path="url(#halfL)"><g class="seal__half seal__half--l"><use href="#wax"/></g></g>
+              <g clip-path="url(#halfR)"><g class="seal__half seal__half--r"><use href="#wax"/></g></g>
+            </svg>
+          </div>
+        </div>
+
+      </div>
+
+      <button class="envelope-hit" id="openBtn" aria-label="Open the love letter">
+        <span class="sr-only">Open the letter</span>
+      </button>
+      <span class="env-focus" aria-hidden="true"></span>
+    </div>
+
+    <p class="hint" id="hint"><span>tap to open</span></p>
+
+    <p class="signature">
+      <span class="signature__love">LOVE ,</span>
+      <span class="signature__name">OLIVIA</span>
+    </p>
+
+  </section>
+
+  <!-- ================= SCENE 2 : THE LETTER ================= -->
+  <section class="scene scene--letter" id="sceneLetter" aria-label="Your love letter">
+    <div class="letter-halo" aria-hidden="true"></div>
+
+    <div class="card" id="card">
+
+      <svg class="card-decor" viewBox="0 0 320 452" aria-hidden="true">
+        <defs>
+          <path id="d-heart" d="M0 42C0 42-44 12-44-15c0-17 13-27 27-27 9 0 15 7 17 14 2-7 8-14 17-14 14 0 27 10 27 27 0 27-44 57-44 57Z"/>
+          <path id="d-leaf" d="M-17 4C-7-8 9-12 17-6 11 8-5 12-17 4Z"/>
+          <g id="d-rosette">
+            <g fill="var(--dec)">
+              <ellipse cx="0" cy="-10" rx="5.5" ry="10"/>
+              <ellipse cx="0" cy="-10" rx="5.5" ry="10" transform="rotate(60)"/>
+              <ellipse cx="0" cy="-10" rx="5.5" ry="10" transform="rotate(120)"/>
+              <ellipse cx="0" cy="-10" rx="5.5" ry="10" transform="rotate(180)"/>
+              <ellipse cx="0" cy="-10" rx="5.5" ry="10" transform="rotate(240)"/>
+              <ellipse cx="0" cy="-10" rx="5.5" ry="10" transform="rotate(300)"/>
+            </g>
+            <circle r="5" fill="var(--cream-w)"/>
+            <circle r="2" fill="var(--dec-d)"/>
+          </g>
+          <g id="d-sprig">
+            <path d="M-11 14C-7 6-2 1 5-3" fill="none" stroke="var(--cream-w)" stroke-width="2.2" stroke-linecap="round"/>
+            <use href="#d-leaf" fill="var(--cream-w)" transform="translate(-8 9) rotate(30) scale(.36)"/>
+            <use href="#d-leaf" fill="var(--cream-w)" transform="translate(-3 4) rotate(30) scale(.3)"/>
+            <circle cx="6" cy="-4" r="2.8" fill="var(--cream-w)"/>
+          </g>
+          <path id="d-star" fill="var(--dec)" d="M0-13 3.2-3.2 13 0 3.2 3.2 0 13-3.2 3.2-13 0-3.2-3.2Z"/>
+          <g id="d-dots" fill="var(--cream-w)">
+            <circle r="2.3"/><circle cx="7" cy="-4.5" r="1.7"/>
+            <circle cx="6" cy="5" r="1.5"/><circle cx="-6" cy="3" r="1.3"/>
+          </g>
+          <path id="d-spark" fill="var(--cream-w)" d="M0-7 1.7-1.7 7 0 1.7 1.7 0 7-1.7 1.7-7 0-1.7-1.7Z"/>
+          <!-- arms point +x and +y from the origin -->
+          <g id="d-corner">
+            <path d="M0 26C0 10 8 2 24 0" fill="none" stroke="var(--cream-w)" stroke-width="3.2" stroke-linecap="round"/>
+            <path fill="var(--cream-w)" d="M20-3c7 2 10 9 8 16-7 0-13-6-14-12z"/>
+            <path fill="var(--cream-w)" d="M-3 18c3-7 10-10 17-8 0 8-6 14-12 15z"/>
+            <circle cx="6" cy="6" r="2.6" fill="var(--cream-w)"/>
+            <circle cx="22" cy="24" r="2" fill="var(--cream-w)"/>
+          </g>
+        </defs>
+
+        <!-- inner letter panel -->
+        <rect class="p-in" x="53" y="74" width="214" height="303" fill="var(--blush)" style="--d:80ms"/>
+
+        <!-- top band -->
+        <g transform="translate(54 26)"><use class="p-in" href="#d-spark" style="--d:180ms"/></g>
+        <g transform="translate(72 32) scale(.9)"><use class="p-in" href="#d-dots" style="--d:220ms"/></g>
+        <g transform="translate(94 35) rotate(-40) scale(.78)"><use class="p-in" href="#d-sprig" style="--d:260ms"/></g>
+        <g transform="translate(114 32) scale(.82)"><use class="p-in" href="#d-rosette" style="--d:300ms"/></g>
+        <g transform="translate(134 27) scale(.2)"><use class="p-in" href="#d-heart" fill="var(--dec)" style="--d:340ms"/></g>
+        <g transform="translate(160 30) scale(.38)"><use class="p-in" href="#d-heart" fill="var(--dec-d)" style="--d:380ms"/></g>
+        <g transform="translate(186 27) scale(.2)"><use class="p-in" href="#d-heart" fill="var(--dec)" style="--d:340ms"/></g>
+        <g transform="translate(206 32) scale(.82)"><use class="p-in" href="#d-rosette" style="--d:300ms"/></g>
+        <g transform="translate(226 35) rotate(40) scale(.78)"><use class="p-in" href="#d-sprig" style="--d:260ms"/></g>
+        <g transform="translate(248 32) scale(.9)"><use class="p-in" href="#d-dots" style="--d:220ms"/></g>
+        <g transform="translate(266 26)"><use class="p-in" href="#d-spark" style="--d:180ms"/></g>
+
+        <!-- bottom band -->
+        <g transform="translate(68 420) scale(.85)"><use class="p-in" href="#d-dots" style="--d:200ms"/></g>
+        <g transform="translate(90 416) rotate(40) scale(.74)"><use class="p-in" href="#d-sprig" style="--d:240ms"/></g>
+        <g transform="translate(112 420) scale(.8)"><use class="p-in" href="#d-rosette" style="--d:280ms"/></g>
+        <g transform="translate(134 418) scale(.22)"><use class="p-in" href="#d-heart" fill="var(--dec)" style="--d:320ms"/></g>
+        <g transform="translate(160 421) scale(.42)"><use class="p-in" href="#d-heart" fill="var(--dec-d)" style="--d:360ms"/></g>
+        <g transform="translate(186 418) scale(.22)"><use class="p-in" href="#d-heart" fill="var(--dec)" style="--d:320ms"/></g>
+        <g transform="translate(208 420) scale(.8)"><use class="p-in" href="#d-rosette" style="--d:280ms"/></g>
+        <g transform="translate(230 416) rotate(-40) scale(.74)"><use class="p-in" href="#d-sprig" style="--d:240ms"/></g>
+        <g transform="translate(252 420) scale(.85)"><use class="p-in" href="#d-dots" style="--d:200ms"/></g>
+
+        <!-- side borders -->
+        <g transform="translate(18 152) scale(.68)"><use class="p-in" href="#d-star" style="--d:420ms"/></g>
+        <g transform="translate(18 188) rotate(-25) scale(.78)"><use class="p-in" href="#d-sprig" style="--d:440ms"/></g>
+        <g transform="translate(18 224) scale(.28)"><use class="p-in" href="#d-heart" fill="var(--dec)" style="--d:460ms"/></g>
+        <g transform="translate(18 262) scale(.9)"><use class="p-in" href="#d-dots" style="--d:480ms"/></g>
+        <g transform="translate(18 298) rotate(30) scale(.78)"><use class="p-in" href="#d-sprig" style="--d:500ms"/></g>
+        <g transform="translate(18 336) scale(.68)"><use class="p-in" href="#d-star" style="--d:520ms"/></g>
+
+        <g transform="translate(302 152) scale(.68)"><use class="p-in" href="#d-star" style="--d:420ms"/></g>
+        <g transform="translate(302 188) rotate(25) scale(.78)"><use class="p-in" href="#d-sprig" style="--d:440ms"/></g>
+        <g transform="translate(302 224) scale(.28)"><use class="p-in" href="#d-heart" fill="var(--dec)" style="--d:460ms"/></g>
+        <g transform="translate(302 262) scale(.9)"><use class="p-in" href="#d-dots" style="--d:480ms"/></g>
+        <g transform="translate(302 298) rotate(-30) scale(.78)"><use class="p-in" href="#d-sprig" style="--d:500ms"/></g>
+        <g transform="translate(302 336) scale(.68)"><use class="p-in" href="#d-star" style="--d:520ms"/></g>
+
+        <!-- corner flourishes -->
+        <g transform="translate(18 20) scale(.85)"><use class="p-in" href="#d-corner" style="--d:140ms"/></g>
+        <g transform="translate(302 20) rotate(90) scale(.85)"><use class="p-in" href="#d-corner" style="--d:140ms"/></g>
+        <g transform="translate(18 432) rotate(-90) scale(.85)"><use class="p-in" href="#d-corner" style="--d:160ms"/></g>
+        <g transform="translate(302 432) rotate(180) scale(.85)"><use class="p-in" href="#d-corner" style="--d:160ms"/></g>
+      </svg>
+
+      <div class="card-panel" id="cardPanel">
+        <h1 class="card-greeting" id="greeting">Dear Love,</h1>
+        <div class="card-body" id="body"></div>
+        <p class="card-sign" id="sign">
+          <span id="closing">Forever yours,</span>
+          <strong id="name">Henry</strong>
+          <em id="kiss">xx</em>
+        </p>
+      </div>
+
+    </div>
+
+    <button class="replay" id="replay">Close &amp; read again</button>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ==========================================================
+     ▼▼▼  YOUR LETTER GOES HERE  ▼▼▼
+     Edit anything below. Plain text — apostrophes are fine.
+     ========================================================== */
+  const LETTER = {
+    greeting: 'Dear Love,',
+    paragraphs: [
+      'Somewhere between your first hello and tonight, my whole life quietly rearranged itself around you. I did not notice it happening, and then one day I looked up and realised every good thing in my day had your name written somewhere inside it.',
+      'You are the calm in my loudest days and the laugh in my quietest ones. You make an ordinary Tuesday feel like something worth remembering, and you make me feel like I am exactly where I am supposed to be.',
+      'So here is a whole envelope for one small feeling: I would choose you again. Every time. Without hesitating even once.'
+    ],
+    closing: 'Forever yours,',
+    name: 'Henry',
+    kiss: 'xx'
+  };
+  /* ▲▲▲  END OF YOUR LETTER  ▲▲▲ */
+
+  /* the state class goes on <body>, not #stage: the stage needs to target
+     itself (.stage.is-open) and .grain is a sibling of .stage, so a single
+     ancestor-level flag is what keeps every selector reachable. */
+  const root     = document.body;
+  const openBtn  = document.getElementById('openBtn');
+  const seal     = document.getElementById('seal');
+  const replay   = document.getElementById('replay');
+  const burstBox = document.getElementById('burst');
+  const heartBox = document.getElementById('hearts');
+  const hint     = document.getElementById('hint');
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SVGNS   = 'http://www.w3.org/2000/svg';
+  const HEART   = 'M0 42C0 42-44 12-44-15c0-17 13-27 27-27 9 0 15 7 17 14 2-7 8-14 17-14 14 0 27 10 27 27 0 27-44 57-44 57Z';
+
+  let state = 'closed';
+
+  /* ---------- render the letter ---------- */
+  const esc = s => String(s).replace(/[&<>"]/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+
+  function renderLetter(){
+    document.getElementById('greeting').textContent = LETTER.greeting;
+    document.getElementById('body').innerHTML = LETTER.paragraphs
+      .map((p, i) => '<p style="--i:' + i + '">' + esc(p) + '</p>').join('');
+    document.getElementById('closing').textContent = LETTER.closing;
+    document.getElementById('name').textContent    = LETTER.name;
+    document.getElementById('kiss').textContent    = LETTER.kiss;
+    document.getElementById('sign').style.setProperty('--i', LETTER.paragraphs.length);
+  }
+  renderLetter();
+
+  /* ---------- ambient floating hearts ---------- */
+  function makeHearts(n){
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < n; i++){
+      const s = document.createElementNS(SVGNS, 'svg');
+      s.setAttribute('viewBox', '-44 -42 88 84');
+      s.setAttribute('class', 'fheart');
+      const size = 10 + Math.random() * 22;
+      s.style.left  = (Math.random() * 96) + 'vw';
+      s.style.width = size + 'px';
+      s.style.height = size + 'px';
+      s.style.setProperty('--dx',  (Math.random() * 80 - 40) + 'px');
+      s.style.setProperty('--rot', (Math.random() * 420 - 210) + 'deg');
+      s.style.animationDuration = (13 + Math.random() * 16) + 's';
+      s.style.animationDelay = (-Math.random() * 24) + 's';
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', HEART);
+      p.setAttribute('fill', 'currentColor');
+      s.appendChild(p);
+      frag.appendChild(s);
+    }
+    heartBox.appendChild(frag);
+  }
+  makeHearts(16);
+
+  /* ---------- wax shatter ---------- */
+  function shatter(){
+    const r  = seal.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top  + r.height / 2;
+    const colors = ['#A43130', '#B83A37', '#7A2425', '#C14945'];
+    const frag = document.createDocumentFragment();
+
+    for (let i = 0; i < 20; i++){
+      const s = document.createElementNS(SVGNS, 'svg');
+      s.setAttribute('viewBox', '-44 -42 88 84');
+      s.setAttribute('class', 'shard');
+      const size = 7 + Math.random() * 15;
+      const ang  = Math.random() * Math.PI * 2;
+      const dist = 90 + Math.random() * 280;
+      s.style.width = size + 'px';
+      s.style.height = size + 'px';
+      s.style.left = (cx - size / 2) + 'px';
+      s.style.top  = (cy - size / 2) + 'px';
+      s.style.color = colors[i % colors.length];
+      s.style.setProperty('--tx', (Math.cos(ang) * dist) + 'px');
+      s.style.setProperty('--ty', (Math.sin(ang) * dist - 90) + 'px');
+      s.style.setProperty('--r',  (Math.random() * 720 - 360) + 'deg');
+      s.style.animationDelay = (Math.random() * 0.12) + 's';
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', HEART);
+      p.setAttribute('fill', 'currentColor');
+      s.appendChild(p);
+      frag.appendChild(s);
+    }
+    burstBox.appendChild(frag);
+    setTimeout(() => { burstBox.innerHTML = ''; }, 2400);
+  }
+
+  /* ---------- open / close ---------- */
+  function open(){
+    if (state !== 'closed') return;
+    state = 'opening';
+    root.classList.add('is-opening');
+    seal.classList.add('is-breaking');
+    if (!reduced) shatter();
+
+    setTimeout(() => {
+      root.classList.add('is-open');
+      state = 'open';
+      const panel = document.getElementById('cardPanel');
+      if (panel) panel.scrollTop = 0;
+    }, reduced ? 60 : 1800);
+  }
+
+  function close(){
+    if (state === 'closed') return;
+    state = 'closed';
+    root.classList.remove('is-open', 'is-opening');
+    seal.classList.remove('is-breaking');
+    openBtn.focus({ preventScroll: true });
+  }
+
+  openBtn.addEventListener('click', open);
+  replay.addEventListener('click', close);
+
+  document.addEventListener('keydown', e => {
+    if (state !== 'closed') return;
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    if (document.activeElement === openBtn) return;   // let the button handle it
+    e.preventDefault();
+    open();
+  });
+
+  /* ---------- gentle nudge if nobody clicks ---------- */
+  setTimeout(() => {
+    if (state !== 'closed') return;
+    const s = hint.querySelector('span');
+    if (!s) return;
+    s.style.animation = 'none';
+    s.style.transform = 'translateY(-5px)';
+  }, 9000);
+})();
+</script>
+</body>
+</html>
