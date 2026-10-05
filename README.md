@@ -5,7 +5,7 @@ it, and the letter reveals itself.
 
 ## Features
 
-- **Sealed envelope scene** with a 3D wax seal, floating heart particles, and
+- **Sealed envelope scene** with a 3D wax seal, drifting flower particles, and
   paper grain texture
 - **Press-to-open interaction** — click, tap, or press `Space` / `Enter`.
   The seal shatters, the flap folds back behind the envelope, and the letter
@@ -104,7 +104,7 @@ The reveal is deliberately structured so the browser can composite it:
 - **No animation targets an inner SVG element.** The little heart on the
   sliding letter animates the outermost `<svg>`, which composites; on the
   inner `<path>` it repainted that SVG every frame during the 3D slide.
-- Ambient loops (floating hearts, hint pulse) are **paused while the opening
+- Ambient loops (drifting flowers, hint pulse) are **paused while the opening
   plays** via `animation-play-state`, then resume on close.
 - Promoted layers are released via an `is-settled` class once everything stops.
 

@@ -148,14 +148,14 @@ body.is-open .grain{opacity:.032}
 }
 body.is-open .bloom{opacity:1;transform:scale(4.6)}
 
-.hearts{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;transition:opacity .7s ease}
-body.is-open .hearts{opacity:0}
+.flowers{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;transition:opacity .7s ease}
+body.is-open .flowers{opacity:0}
 /* stand the ambient loops down while the opening plays: ten extra
    composited layers competing for the same frames buys nothing,
    and they are about to be faded out anyway */
-body.is-opening .fheart,
+body.is-opening .fflower,
 body.is-opening .hint span{animation-play-state:paused}
-.fheart{
+.fflower{
   position:absolute;bottom:-12vh;
   color:var(--seal-m);opacity:0;
   animation:drift linear infinite;
@@ -687,7 +687,7 @@ body.is-settled .envelope-float{will-change:auto}
 <main class="stage" id="stage">
 
   <div class="bloom" aria-hidden="true"></div>
-  <div class="hearts" id="hearts" aria-hidden="true"></div>
+  <div class="flowers" id="flowers" aria-hidden="true"></div>
 
   <!-- ================= SCENE 1 : ENVELOPE ================= -->
   <section class="scene scene--envelope" id="sceneEnvelope">
@@ -935,7 +935,7 @@ body.is-settled .envelope-float{will-change:auto}
   const seal     = document.getElementById('seal');
   const replay   = document.getElementById('replay');
   const burstBox = document.getElementById('burst');
-  const heartBox = document.getElementById('hearts');
+  const flowerBox = document.getElementById('flowers');
   const hint     = document.getElementById('hint');
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1005,15 +1005,42 @@ body.is-settled .envelope-float{will-change:auto}
   })();
 
   /* ==========================================================
-     Ambient floating hearts
+     Ambient drifting flowers
      ========================================================== */
-  (function makeHearts(n){
+  /* The wax seal is the heart, so what floats in the air behind the
+     envelope is flowers instead. Five slim petals radiating from a
+     solid centre — the petals are kept narrow and pushed outward so
+     they stay visibly separate; wide petals merging at the middle just
+     read as one blobby splat rather than a flower. */
+  function flowerNode(){
+    const s = document.createElementNS(SVGNS, 'svg');
+    s.setAttribute('viewBox', '-50 -50 100 100');
+    s.setAttribute('class', 'fflower');
+    for (let k = 0; k < 5; k++){
+      const e = document.createElementNS(SVGNS, 'ellipse');
+      e.setAttribute('cx', '0');
+      e.setAttribute('cy', '-28');
+      e.setAttribute('rx', '9');
+      e.setAttribute('ry', '19');
+      e.setAttribute('transform', 'rotate(' + (k * 72) + ')');
+      e.setAttribute('fill', 'currentColor');
+      s.appendChild(e);
+    }
+    // solid centre, so the eye sees a disc rather than a hole. No light
+    // pip: a pale dot in the middle of the petals just reads as a hole,
+    // especially at ~50% opacity over a cream page.
+    const disc = document.createElementNS(SVGNS, 'circle');
+    disc.setAttribute('r', '11');
+    disc.setAttribute('fill', 'currentColor');
+    s.appendChild(disc);
+    return s;
+  }
+
+  (function makeFlowers(n){
     const frag = document.createDocumentFragment();
     for (let i = 0; i < n; i++){
-      const s = document.createElementNS(SVGNS, 'svg');
-      s.setAttribute('viewBox', '-44 -42 88 84');
-      s.setAttribute('class', 'fheart');
-      const size = 10 + Math.random() * 22;
+      const s = flowerNode();
+      const size = 13 + Math.random() * 21;
       s.style.left   = (Math.random() * 96) + 'vw';
       s.style.width  = size + 'px';
       s.style.height = size + 'px';
@@ -1021,13 +1048,9 @@ body.is-settled .envelope-float{will-change:auto}
       s.style.setProperty('--rot', (Math.random() * 420 - 210) + 'deg');
       s.style.animationDuration = (13 + Math.random() * 16) + 's';
       s.style.animationDelay = (-Math.random() * 24) + 's';
-      const p = document.createElementNS(SVGNS, 'path');
-      p.setAttribute('d', HEART);
-      p.setAttribute('fill', 'currentColor');
-      s.appendChild(p);
       frag.appendChild(s);
     }
-    heartBox.appendChild(frag);
+    flowerBox.appendChild(frag);
   })(10);
 
   /* ==========================================================
