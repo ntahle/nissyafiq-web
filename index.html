@@ -360,21 +360,6 @@ body.is-opening .flap,body.is-open .flap{
    element re-renders on every frame of the swing */
 .flap__face--back{transform:rotateX(180deg)}
 
-/* Soft shadow as its own static element. Previously this was
-   filter:drop-shadow() on .seal, and because the seal pulse animated
-   *inside* it the filter re-rendered on every frame, forever. */
-.seal-shadow{
-  position:absolute;left:50%;top:56%;
-  width:27%;padding-top:23%;
-  /* nudged down so it reads as a cast shadow, not a halo */
-  transform:translate(-50%,-46%) translateZ(7px);
-  border-radius:50%;
-  background:radial-gradient(ellipse at 50% 70%,
-    rgba(90,20,20,.50) 0%,
-    rgba(90,20,20,.22) 46%,
-    rgba(90,20,20,0) 72%);
-  pointer-events:none;
-}
 .seal{
   position:absolute;left:50%;top:56%;
   width:23%;
@@ -768,7 +753,6 @@ body.is-settled .envelope-float{will-change:auto}
           </div>
 
           <!-- wax seal -->
-          <div class="seal-shadow" aria-hidden="true"></div>
           <div class="seal" id="seal" aria-hidden="true">
             <div class="seal-idle">
               <svg viewBox="-56 -54 112 108">
