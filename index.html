@@ -176,12 +176,23 @@ body.is-opening .hint span{animation-play-state:paused}
    forces it flat and stutters the exit */
 body.is-open .scene--envelope{opacity:0;transform:scale(.94) translateY(-3vh);pointer-events:none}
 
+/* The letter is long, so this scene scrolls normally instead of
+   trapping the text inside a fixed-aspect card. It is position:fixed
+   inside a stage that must not scroll, so the envelope screen still
+   never scrolls. */
 .scene--letter{
   position:fixed;inset:0;
-  display:grid;place-items:center;
+  display:flex;flex-direction:column;align-items:center;
+  gap:clamp(14px,2.6vh,26px);
+  padding:clamp(18px,4vh,44px) 0;
+  overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:rgba(255,240,236,.5) transparent;
   opacity:0;pointer-events:none;
   transition:opacity .75s ease;
 }
+.scene--letter::-webkit-scrollbar{width:9px}
+.scene--letter::-webkit-scrollbar-thumb{background:rgba(255,240,236,.45);border-radius:9px}
 body.is-open .scene--letter{opacity:1;pointer-events:auto}
 
 /* ============================================================
@@ -394,14 +405,22 @@ body.is-opening .hint,body.is-open .hint{opacity:0}
   pointer-events:none;
 }
 
+/* The card is now as tall as the letter, so the container query lives on
+   this shell: .card cannot use its own cqw units, and padding written in
+   % on .card would resolve against the SCENE's width, not the card's. */
+.card-shell{
+  width:min(94vw,825px);
+  container-type:inline-size;
+  flex:none;
+}
 .card{
   position:relative;
-  width:min(90vw,420px,55svh);
-  aspect-ratio:320/452;
+  /* 23.125 + 94.6875 + 23.4375 = 141.25cqw = 452/320, so a short letter
+     still renders at exactly the reference greeting-card proportions */
+  padding:23.125cqw 16.5625cqw 23.4375cqw;
   background:var(--pink);
   border-radius:2px;
   box-shadow:0 18px 38px rgba(120,25,35,.40), 0 3px 8px rgba(120,25,35,.24);
-  container-type:inline-size;
   opacity:0;transform:translateY(18px);
   will-change:transform,opacity;
   transition:opacity .6s ease .2s, transform .7s var(--ease-glide) .2s;
@@ -433,29 +452,32 @@ body.is-open .decor-layer{
   opacity:1;transform:none;
   transition:opacity .5s ease var(--d,0ms), transform .55s var(--ease-pop) var(--d,0ms);
 }
-.decor-top   {top:1.3274%;   height:10.1770%; --d:0ms}
-.decor-bottom{top:88.0531%;  height:10.6195%; --d:90ms}
-.decor-sides {top:30.5310%;  height:47.3451%; --d:180ms}
+/* Band sizes are in cqw (a % of the card's WIDTH) rather than % of its
+   height, so they keep their designed aspect ratio once the card grows
+   tall to fit a long letter. Top/bottom pin to the card edges; the side
+   borders sit just under the top band and just above the bottom one, so
+   the decorations frame the letter instead of drifting into its middle. */
+.decor-top     {top:1.875cqw;     height:14.375cqw;  --d:0ms}
+.decor-bottom  {bottom:1.875cqw;  height:15cqw;      --d:90ms}
+.decor-sides   {top:17cqw;        height:66.875cqw;  --d:180ms}
+.decor-sides-b {bottom:17cqw;     height:66.875cqw;  --d:180ms}
 
 .card-panel{
-  position:absolute;
-  left:16.56%;top:16.37%;width:66.875%;height:67.04%;
+  position:relative;
   background:var(--blush);
-  padding:5.6% 7.2% 4.4%;
+  min-height:94.6875cqw;   /* 303/320 — the reference panel's proportion */
+  padding:5.6% 6.5%;
   display:flex;flex-direction:column;
-  overflow-y:auto;overscroll-behavior:contain;
-  scrollbar-width:thin;scrollbar-color:rgba(230,51,56,.35) transparent;
+  /* no inner scrolling any more: the card grows and the page scrolls */
 }
-.card-panel::-webkit-scrollbar{width:5px}
-.card-panel::-webkit-scrollbar-thumb{background:rgba(230,51,56,.3);border-radius:9px}
 
 /* text reveals stagger on open but reset instantly on close */
 .card-greeting{
-  margin:0 0 .5em;flex:none;
+  margin:0 0 .7em;flex:none;
   font-family:var(--font-serif);font-weight:900;
-  font-size:19px;                         /* fallback */
-  font-size:clamp(19px,7.1cqw,31px);      /* scales with card width */
-  line-height:1.12;color:var(--dec);
+  font-size:19px;                          /* fallback */
+  font-size:clamp(18px,3.05cqw,25px);      /* scales with card width */
+  line-height:1.3;color:var(--dec);
   opacity:0;transform:translateY(10px);
   transition:opacity .25s ease, transform .25s ease;
 }
@@ -465,11 +487,11 @@ body.is-open .card-greeting{
 }
 
 .card-body{
-  font-size:12px;                         /* fallback */
-  font-size:clamp(12px,3cqw,13.6px);      /* scales with card width */
-  line-height:1.78;color:var(--body-ink);
+  font-size:15px;                          /* fallback */
+  font-size:clamp(14.5px,2.05cqw,17px);    /* scales with card width */
+  line-height:1.82;color:var(--body-ink);
 }
-.card-body p{margin:0 0 .95em}
+.card-body p{margin:0 0 1.05em;text-wrap:pretty}
 .card-body p:last-child{margin-bottom:0}
 .card-body p{
   opacity:0;transform:translateY(9px);
@@ -482,12 +504,12 @@ body.is-open .card-body p{
 }
 
 .card-sign{
-  margin:auto 0 0;padding-top:1.1em;flex:none;
+  margin:auto 0 0;padding-top:1.4em;flex:none;
   text-align:right;
   font-family:var(--font-body);
-  font-size:11px;
-  font-size:clamp(10.5px,2.5cqw,12px);
-  line-height:1.5;color:var(--body-ink);
+  font-size:14px;
+  font-size:clamp(13px,1.75cqw,14.8px);
+  line-height:1.6;color:var(--body-ink);
   opacity:0;transform:translateY(9px);
   transition:opacity .25s ease, transform .25s ease;
 }
@@ -498,17 +520,17 @@ body.is-open .card-sign{
 }
 .card-sign span{display:block}
 .card-sign strong{
-  display:block;margin-top:.18em;
+  display:block;margin-top:.2em;
   font-family:var(--font-serif);font-weight:700;
-  font-size:clamp(13px,3.3cqw,15.5px);
+  font-size:clamp(15px,2.3cqw,19px);
   color:var(--dec);
 }
 .card-sign em{display:block;margin-top:.1em;font-style:italic;color:var(--dec)}
+.card-sign em:empty{display:none}
 
+/* normal flow now: it sits after the card at the end of the letter */
 .replay{
-  position:absolute;bottom:clamp(12px,3vh,26px);left:50%;
-  transform:translateX(-50%);
-  z-index:20;
+  flex:none;
   font-family:var(--font-type);
   font-size:11px;letter-spacing:.24em;text-transform:uppercase;
   color:var(--cream-w);
@@ -550,9 +572,14 @@ body.is-settled .envelope-float{will-change:auto}
 /* ============================================================
    RESPONSIVE
    ============================================================ */
-@media (max-width:520px){
+@media (max-width:640px){
   .signature__name{letter-spacing:.24em;text-indent:.24em}
-  .card-panel{padding:5.2% 6.4% 4%}
+  /* narrower decorative margins so the letter keeps a readable measure,
+     and the letter still clears the side sprigs (which stop at 10%) */
+  .card{padding:20cqw 12cqw}
+  .card-panel{padding:6% 5%}
+  .card-body{font-size:14.5px;line-height:1.8}
+  .decor-sides,.decor-sides-b{height:60cqw}
 }
 
 /* ============================================================
@@ -713,8 +740,8 @@ body.is-settled .envelope-float{will-change:auto}
     <p class="hint" id="hint"><span>tap to open</span></p>
 
     <p class="signature">
-      <span class="signature__love">LOVE ,</span>
-      <span class="signature__name">OLIVIA</span>
+      <span class="signature__love">ALWAYS,</span>
+      <span class="signature__name">SYAFIQ</span>
     </p>
 
   </section>
@@ -723,6 +750,7 @@ body.is-settled .envelope-float{will-change:auto}
   <section class="scene scene--letter" id="sceneLetter" aria-label="Your love letter">
     <div class="letter-halo" aria-hidden="true"></div>
 
+    <div class="card-shell">
     <div class="card" id="card">
 
       <!-- top band: corner flourishes + valentine garland.
@@ -774,6 +802,26 @@ body.is-settled .envelope-float{will-change:auto}
         <g transform="translate(302 336) scale(.68)"><use href="#d-star"/></g>
       </svg>
 
+      <!-- side borders, mirrored for the bottom: viewBox y 138..352,
+           flipped in the svg (translate+scale) rather than with a CSS
+           transform, which the open-state transform:none would clobber -->
+      <svg class="decor-layer decor-sides-b" viewBox="0 138 320 214" preserveAspectRatio="none" aria-hidden="true">
+        <g transform="translate(0 490) scale(1 -1)">
+          <g transform="translate(18 152) scale(.68)"><use href="#d-star"/></g>
+          <g transform="translate(18 188) rotate(-25) scale(.78)"><use href="#d-sprig"/></g>
+          <g transform="translate(18 224) scale(.28)"><use href="#d-heart" fill="var(--dec)"/></g>
+          <g transform="translate(18 262) scale(.9)"><use href="#d-dots"/></g>
+          <g transform="translate(18 298) rotate(30) scale(.78)"><use href="#d-sprig"/></g>
+          <g transform="translate(18 336) scale(.68)"><use href="#d-star"/></g>
+          <g transform="translate(302 152) scale(.68)"><use href="#d-star"/></g>
+          <g transform="translate(302 188) rotate(25) scale(.78)"><use href="#d-sprig"/></g>
+          <g transform="translate(302 224) scale(.28)"><use href="#d-heart" fill="var(--dec)"/></g>
+          <g transform="translate(302 262) scale(.9)"><use href="#d-dots"/></g>
+          <g transform="translate(302 298) rotate(-30) scale(.78)"><use href="#d-sprig"/></g>
+          <g transform="translate(302 336) scale(.68)"><use href="#d-star"/></g>
+        </g>
+      </svg>
+
       <div class="card-panel" id="cardPanel">
         <h1 class="card-greeting" id="greeting">Dear Love,</h1>
         <div class="card-body" id="body"></div>
@@ -784,6 +832,7 @@ body.is-settled .envelope-float{will-change:auto}
         </p>
       </div>
 
+    </div>
     </div>
 
     <button class="replay" id="replay">Close &amp; read again</button>
@@ -800,15 +849,33 @@ body.is-settled .envelope-float{will-change:auto}
      Edit anything below. Plain text — apostrophes are fine.
      ========================================================== */
   const LETTER = {
-    greeting: 'Dear Love,',
+    greeting: 'To the person who once meant the world to me, Nissa',
     paragraphs: [
-      'Somewhere between your first hello and tonight, my whole life quietly rearranged itself around you. I did not notice it happening, and then one day I looked up and realised every good thing in my day had your name written somewhere inside it.',
-      'You are the calm in my loudest days and the laugh in my quietest ones. You make an ordinary Tuesday feel like something worth remembering, and you make me feel like I am exactly where I am supposed to be.',
-      'So here is a whole envelope for one small feeling: I would choose you again. Every time. Without hesitating even once.'
+      'This was supposed to be our anniversary gift. I remember getting it while thinking about us, about everything we had been through together, and about how I wanted to give it to you when our anniversary came. Things didn’t turn out the way I imagined they would, but I still felt that you deserved to have it, as that was my intention from the beginning. Maybe it’s strange to give you an anniversary gift when we’re no longer together, but to me, this gift still carries the meaning it had when I first chose it for you.',
+
+      'I don’t really know what the right words are for a goodbye like this. There are so many things I want to say, but somehow none of them feel enough. We shared so many moments together, both the beautiful ones and the difficult ones. There were times when you made me happier than you probably ever realized, and there were times when I failed to appreciate you the way I should have. Looking back, I know I made mistakes. I broke promises, I hurt you, and I wasn’t always the partner you deserved. For all of that, I’m truly sorry.',
+
+      'Thank you for loving me, for being patient with me, for supporting me, and for staying beside me through so many things. Thank you for all the small things too, the energy, the laughter, the random moments, and the memories that probably seemed ordinary at the time but became some of the most meaningful parts of my life. I’ll always be grateful that, for a part of my life, I got to call you mine and experience what it felt like to be loved by you.',
+
+      'I will always remember the day I saw you for the first time. I didn’t know then how important you would become in my life or how many memories we would eventually create together. If I could go back to that moment, knowing everything I know now, I think I would still want to meet you all over again. That first moment will always be a part of my memory, because it was the beginning of a chapter that gave me so many moments I will never forget.',
+
+      'I know things between us are different now, and maybe this is where our story is supposed to end. As much as a part of me wishes things could have stayed the way they were, I know I have to accept what has happened. I don’t want this gift to be something that makes you feel like you owe me anything, or something that brings you sadness. I just wanted to give you one last thing that I had chosen for you with love, because that was how I felt when I bought it, and honestly, that feeling is still there even now.',
+
+      'I hope that one day, when you look back at our relationship, you won’t only remember the things that went wrong. I hope you remember the good moments too, the times we laughed until we couldn’t stop, the conversations that lasted for hours, the places we went, the things we experienced, and all the little moments that made us who we were. Even though we didn’t get the ending we once hoped for, I don’t regret meeting you or loving you.',
+
+      'I also hope you know that I never stopped wishing the best for you. I hope you achieve everything you’ve ever dreamed of. I hope you become even happier, stronger, and more confident in yourself. And wherever life takes you, I hope you always remember that there was someone who genuinely cared about you and was grateful to have you in his life.',
+
+      'Maybe this really is the last gift I’ll ever give you, and maybe this is the last anniversary we’ll ever have together. That hurts to accept, but I think some things are meant to be remembered rather than held onto. So I’m giving this to you without expecting anything in return. Just take it as a small reminder of the love, memories, and time we once shared.',
+
+      'Thank you for being a part of my life. Thank you for the love you gave me. Thank you for the memories that I’ll carry with me. I’m sorry for the things I did wrong, and I’m sorry for the pain I caused you. I wish I could change some things, but I know I can’t.',
+
+      'I’ll always care about you, but I also know that sometimes loving someone means knowing when to let them go. So this is my way of saying thank you, one last time. I hope this gift brings you a little happiness, even if things between us are no longer the same.',
+
+      'Happy early anniversary, for what would have been ours. Take care of yourself, and I genuinely hope life is kind to you. I’ll always be grateful for the chapter we shared, even if we have to close it now.'
     ],
-    closing: 'Forever yours,',
-    name: 'Henry',
-    kiss: 'xx'
+    closing: 'thank you, always.',
+    name: 'syafiq',
+    kiss: ''
   };
   /* ▲▲▲  END OF YOUR LETTER  ▲▲▲ */
 
@@ -977,8 +1044,10 @@ body.is-settled .envelope-float{will-change:auto}
     setTimeout(() => {
       root.classList.add('is-open');
       state = 'open';
-      const panel = document.getElementById('cardPanel');
-      if (panel) panel.scrollTop = 0;
+      // the scene is the scroller now (the card grows taller than the
+      // viewport), so reset IT rather than the inner panel
+      const scroller = document.getElementById('sceneLetter');
+      if (scroller) scroller.scrollTop = 0;
       // drop the promoted layers once nothing is moving
       setTimeout(() => root.classList.add('is-settled'), 1500);
     }, msVar('--t-exit', 2180));

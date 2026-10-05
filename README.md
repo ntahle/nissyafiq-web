@@ -8,10 +8,15 @@ it, and the letter reveals itself.
 - **Sealed envelope scene** with a 3D wax seal, floating heart particles, and
   paper grain texture
 - **Press-to-open interaction** — click, tap, or press `Space` / `Enter`.
-  The seal shatters, the flap swings open, and the letter slides out
+  The seal shatters, the flap folds back behind the envelope, and the letter
+  slides out
 - **Reveal sequence** on the letter card: the folk-art border, then the
   greeting, paragraphs, and signature stagger into view
 - **Replay control** to close and re-read from the start
+- **The card grows to fit the letter.** A short letter renders at exactly the
+  reference greeting-card proportions (320:452). A long one stretches the card
+  and the page scrolls normally, so the text is never trapped in a small
+  scrolling box. The border bands stay pinned to the top and bottom.
 - **No scrolling on the envelope screen** — `fitEnvelope()` sizes the envelope
   to whatever vertical space is left after the text and signature, so the
   scene fits every viewport from a 320×568 phone to 1920×1080
@@ -51,11 +56,25 @@ function-by-function rather than via a matrix decomposition.
 The handwriting fades out as soon as the envelope starts to open, so the
 letter rises into clear space rather than over the text.
 
+## Layout notes
+
+Two details in the letter layout are load-bearing:
+
+- The container query lives on `.card-shell`, **not** `.card`. An element cannot
+  use its own `cqw` units, and `padding` written in `%` on `.card` would resolve
+  against the *scene's* width rather than the card's.
+- Decoration bands are sized in `cqw` (a percentage of the card's **width**)
+  rather than `%` of its height. Percentages of height would stretch the bands
+  once the card grows tall to fit a long letter.
+
+Because the card can be very tall, `.scene--letter` is the scroll container —
+not the inner panel. `open()` resets the scroll there.
+
 ## Performance notes
 
 The reveal is deliberately structured so the browser can composite it:
 
-- The three decoration bands are **separate, tightly-cropped `<svg>` elements**
+- The four decoration bands are **separate, tightly-cropped `<svg>` elements**
   rather than one big SVG. Animating an outermost `<svg>` is composited, while
   animating children *inside* an SVG repaints the whole SVG canvas every frame.
   Shared shapes live in a zero-size sprite `<svg>` and are pulled in via `<use>`.
@@ -98,19 +117,24 @@ Everything you'll want to change lives in a single object at the top of the
 
 ```js
 const LETTER = {
-  greeting: 'Dear Love,',
+  greeting: 'To the person who once meant the world to me, Nissa',
   paragraphs: [
     'Your first paragraph here.',
     'Your second paragraph here.',
   ],
-  closing: 'Forever yours,',
-  name: 'Henry',
-  kiss: 'xx'
+  closing: 'thank you, always.',
+  name: 'syafiq',
+  kiss: ''          // '' hides the line entirely
 };
 ```
 
-Add or remove paragraphs freely — the reveal animation staggers automatically
-based on how many you supply, and long text scrolls inside the inner panel.
+Add or remove paragraphs freely. The reveal staggers automatically based on how
+many you supply, and the card grows to fit — no fixed limit on length.
+
+The envelope's own two texts live in the markup, not in that object:
+
+- the handwriting, in `.script-top`
+- the signature, in `.signature__love` / `.signature__name`
 
 Text colours and the border palette are grouped as CSS custom properties at the
 top of the `<style>` block.
