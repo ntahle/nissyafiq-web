@@ -117,16 +117,28 @@ not the inner panel. `open()` resets the scroll there.
 ## The sound
 
 It is **paper, not music** — every cue is filtered noise, with no oscillators
-at all. Paper has no pitch; it is broadband noise with a granular envelope, so
-the noise is broken into short random grains (1.5–8.5 ms) of varying weight.
-That irregular amplitude texture is what makes it read as a sheet being
-handled rather than as hiss. A highpass (420–620 Hz) removes the low end,
-because leaving it in makes the noise read as a rumble, and a bandpass
-(700–2600 Hz) keeps it in the paper band. Two cues sweep their band, which is
-what makes a sheet sliding sound like a slide rather than a static hiss.
+at all. Paper has no pitch; it is broadband noise with a granular envelope.
 
-Measured: spectral flatness 0.49–0.60 (a pure tone sits near 0.01), grain
-amplitude variation 0.46–0.71, zero oscillators.
+Softness is deliberate, and it comes from five places at once:
+
+- **A soft attack.** Every cue eases in over the first 20% (smoothstep).
+  A near-instant attack is most of what makes noise read as a hard snap.
+- **Smoothed grains.** The noise is broken into short random grains (2.5–10 ms)
+  of varying weight, but the amplitude is one-pole smoothed across grain
+  boundaries. Stepping it outright puts a click at every boundary, and those
+  clicks are what made the texture brittle.
+- **A lowpass** at 3400–3800 Hz. Rolling the top off is the single biggest
+  lever against filtered noise sounding thin and brittle.
+- **Low bands.** Highpass 300–400 Hz (enough to kill rumble without going
+  thin), bandpass 520–1800 Hz.
+- **Low levels.** Source peaks sit around 0.6–0.8 of full scale, and the gain
+  stage takes them to roughly 0.03–0.07.
+
+Two cues sweep their band, which is what makes a sheet sliding sound like a
+slide rather than a static hiss.
+
+Measured: spectral flatness 0.52–0.59 (a pure tone sits near 0.01), zero
+oscillators, no cue reaches full level in the first 5% of its length.
 
 ## Performance notes
 

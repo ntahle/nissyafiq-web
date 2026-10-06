@@ -1360,6 +1360,12 @@ body.is-open .sound:hover{background:rgba(255,240,236,.3)}
        granular, crackly envelope. So every cue here is filtered noise.
        Breaking the noise into short random grains of varying weight is
        what makes it read as paper being handled rather than as hiss. */
+    /* Soft, not sharp. A near-instant attack is most of what makes noise
+       read as a hard snap rather than a rustle, so every cue eases in. */
+    const env = p => {
+      const t = Math.min(1, p / 0.2);
+      return (t * t * (3 - 2 * t)) * Math.pow(1 - p, 1.05);
+    };
     function sheet(dur, vol, delay, o){
       if (!on) return;
       o = o || {};
@@ -1369,54 +1375,56 @@ body.is-open .sound:hover{background:rgba(255,240,236,.3)}
       const buf = a.createBuffer(1, n, sr);
       const d = buf.getChannelData(0);
       if (o.grainy){
-        let i = 0;
+        let i = 0, amp = 0.3;
         while (i < n){
-          const gl = Math.max(1, Math.floor(sr * (0.0015 + Math.random() * 0.007)));
-          const amp = 0.12 + Math.random() * 0.88;
+          const gl = Math.max(1, Math.floor(sr * (0.0025 + Math.random() * 0.0075)));
+          const target = 0.15 + Math.random() * 0.85;
           for (let k = 0; k < gl && i < n; k++, i++){
-            const p = i / n;
-            d[i] = (Math.random() * 2 - 1) * amp * Math.sin(Math.PI * Math.pow(p, 0.65));
+            // one-pole smoothing between grains. Stepping the amplitude
+            // outright puts a click at every boundary, and those clicks are
+            // what made the texture brittle instead of papery.
+            amp += (target - amp) * 0.3;
+            d[i] = (Math.random() * 2 - 1) * amp * env(i / n);
           }
         }
       } else {
-        for (let i = 0; i < n; i++){
-          const p = i / n;
-          d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * Math.pow(p, 0.8));
-        }
+        for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * env(i / n);
       }
       const t0 = a.currentTime + (delay || 0);
       const src = a.createBufferSource(); src.buffer = buf;
-      // highpass first: paper has almost no low end, and leaving it in makes
-      // the noise read as a rumble instead of a rustle
       const hp = a.createBiquadFilter();
-      hp.type = 'highpass'; hp.frequency.value = o.hp || 700; hp.Q.value = 0.7;
+      hp.type = 'highpass'; hp.frequency.value = o.hp || 320; hp.Q.value = 0.6;
       const bp = a.createBiquadFilter();
-      bp.type = 'bandpass'; bp.Q.value = o.q || 0.8;
-      const f1 = o.f1 || 1500, f2 = o.f2 || f1;
+      bp.type = 'bandpass'; bp.Q.value = o.q || 0.7;
+      const f1 = o.f1 || 900, f2 = o.f2 || f1;
       bp.frequency.setValueAtTime(f1, t0);
       if (f2 !== f1) bp.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+      // lowpass last: rolling the very top off is what stops filtered noise
+      // sounding brittle
+      const lp = a.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = o.lp || 3800; lp.Q.value = 0.5;
       const g = a.createGain();
-      g.gain.setValueAtTime(vol == null ? .1 : vol, t0);
+      g.gain.setValueAtTime(vol == null ? .07 : vol, t0);
       g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
-      src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(a.destination);
+      src.connect(hp); hp.connect(bp); bp.connect(lp); lp.connect(g); g.connect(a.destination);
       src.start(t0); src.stop(t0 + dur);
     }
     return {
       isOn: () => on,
       set(v){ on = v; try { localStorage.setItem('ll-sound', v ? 'on' : 'off'); } catch (e) {} },
       // one small crinkle, for the mute toggle
-      blip(){ sheet(.15, .07, 0, { grainy:true, f1:2000, q:1.4, hp:600 }); },
-      // the wax giving way: a short, bright, grainy snap
-      crack(){ sheet(.13, .13, 0, { grainy:true, f1:2600, q:1.7, hp:620 });
-               sheet(.09, .08, .05, { grainy:true, f1:1700, q:1.5, hp:520 }); },
+      blip(){ sheet(.2, .04, 0, { grainy:true, f1:1200, q:1.2, hp:380 }); },
+      // the wax giving way: a grainy crinkle rather than a snap
+      crack(){ sheet(.2, .07, 0, { grainy:true, f1:1800, q:1.4, hp:400 });
+               sheet(.14, .045, .07, { grainy:true, f1:1200, q:1.2, hp:340 }); },
       // the letter sliding clear of the envelope
-      rise(){ sheet(.85, .09, 0, { f1:850, f2:1900, q:0.7, hp:420 }); },
+      rise(){ sheet(.95, .052, 0, { f1:600, f2:1200, q:0.6, hp:300, lp:3400 }); },
       // and settling: two soft crinkles
-      reveal(){ sheet(.34, .05, 0, { grainy:true, f1:1500, q:1.1, hp:520 });
-                sheet(.26, .038, .32, { grainy:true, f1:1900, q:1.1, hp:600 }); },
+      reveal(){ sheet(.42, .03, 0, { grainy:true, f1:1000, q:1.0, hp:340 });
+                sheet(.32, .022, .4, { grainy:true, f1:1300, q:1.0, hp:380 }); },
       // paper pushed back in, then the flap folding down
-      shut(){ sheet(.5, .085, 0, { f1:1700, f2:700, q:0.7, hp:420 });
-              sheet(.2, .05, .58, { grainy:true, f1:1400, q:1.1, hp:520 }); }
+      shut(){ sheet(.6, .05, 0, { f1:1100, f2:520, q:0.6, hp:300, lp:3400 });
+              sheet(.26, .03, .66, { grainy:true, f1:950, q:1.0, hp:340 }); }
     };
   })();
 
