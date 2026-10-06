@@ -763,17 +763,57 @@ body.is-settled .envelope-float{will-change:auto}
             <div class="seal-idle">
               <svg viewBox="-56 -54 112 108">
                 <defs>
-                  <radialGradient id="waxG" cx="36%" cy="30%" r="74%">
+                  <!-- userSpaceOnUse, not the default objectBoundingBox:
+                       the blob is five petals plus a centre disc, and with
+                       the default each shape would get its OWN gradient
+                       box, so the wax shading would restart per petal
+                       instead of flowing across the whole seal. -->
+                  <radialGradient id="waxG" gradientUnits="userSpaceOnUse"
+                                  cx="-14" cy="-22" r="62">
                     <stop offset="0%" stop-color="#CE5350"/>
                     <stop offset="42%" stop-color="var(--seal-m)"/>
                     <stop offset="100%" stop-color="var(--seal-d)"/>
                   </radialGradient>
+                  <!-- the gloss. Fades to fully transparent at its edge, so
+                       it has no boundary: a hard-edged highlight ellipse
+                       left visible crescent slivers across the petals. -->
+                  <radialGradient id="waxHi" gradientUnits="userSpaceOnUse"
+                                  cx="-15" cy="-30" r="27">
+                    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".34"/>
+                    <stop offset="55%" stop-color="#FFFFFF" stop-opacity=".11"/>
+                    <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+                  </radialGradient>
                   <clipPath id="halfL"><rect x="-56" y="-54" width="56" height="108"/></clipPath>
                   <clipPath id="halfR"><rect x="0" y="-54" width="56" height="108"/></clipPath>
                   <g id="wax">
-                    <path d="M0 44C0 44-46 13-46-16c0-18 14-28 28-28 9.5 0 16 7.5 18 15 2-7.5 8.5-15 18-15 14 0 28 10 28 28 0 29-46 60-46 60Z" fill="url(#waxG)"/>
-                    <path d="M0 33C0 33-35 8-35-13c0-13 10-20 21-20 7 0 12 5.5 13.5 11 1.5-5.5 6.5-11 13.5-11 11 0 21 7 21 20 0 21-35 46-35 46Z" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2.4"/>
-                    <ellipse cx="-15" cy="-22" rx="11" ry="7.5" fill="rgba(255,255,255,.28)" transform="rotate(-28 -15 -22)"/>
+                    <!-- flower-shaped wax: five lobes merged with a centre
+                         disc, so the seal reads as one pressed blob.
+                         Each lobe also carries a stroke of the SAME
+                         gradient: overlapping antialiased shapes leave a
+                         faint seam where they meet, and an opaque stroke
+                         of the same paint covers it. -->
+                    <g fill="url(#waxG)" stroke="url(#waxG)" stroke-width="2.2">
+                      <ellipse cx="0" cy="-28" rx="15" ry="18.5"/>
+                      <ellipse cx="0" cy="-28" rx="15" ry="18.5" transform="rotate(72)"/>
+                      <ellipse cx="0" cy="-28" rx="15" ry="18.5" transform="rotate(144)"/>
+                      <ellipse cx="0" cy="-28" rx="15" ry="18.5" transform="rotate(216)"/>
+                      <ellipse cx="0" cy="-28" rx="15" ry="18.5" transform="rotate(288)"/>
+                      <circle cx="0" cy="0" r="17"/>
+                    </g>
+                    <!-- the same flower pressed into the wax. Opaque, and
+                         stroked in its own colour: translucent shapes
+                         overlapping compound their alpha and show as
+                         darker crescents, and outline-only rings read as
+                         a wireframe rather than an emboss. -->
+                    <g fill="#B8464A" stroke="#B8464A" stroke-width="1.4">
+                      <ellipse cx="0" cy="-16.8" rx="9" ry="11.1"/>
+                      <ellipse cx="0" cy="-16.8" rx="9" ry="11.1" transform="rotate(72)"/>
+                      <ellipse cx="0" cy="-16.8" rx="9" ry="11.1" transform="rotate(144)"/>
+                      <ellipse cx="0" cy="-16.8" rx="9" ry="11.1" transform="rotate(216)"/>
+                      <ellipse cx="0" cy="-16.8" rx="9" ry="11.1" transform="rotate(288)"/>
+                      <circle cx="0" cy="0" r="10.2"/>
+                    </g>
+                    <ellipse cx="-15" cy="-30" rx="27" ry="20" fill="url(#waxHi)"/>
                   </g>
                 </defs>
                 <g clip-path="url(#halfL)"><g class="seal__half seal__half--l"><use href="#wax"/></g></g>
