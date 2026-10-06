@@ -601,6 +601,94 @@ body.is-settled .bloom,
 body.is-settled .envelope-float{will-change:auto}
 
 /* ============================================================
+   AMBIENT EFFECTS
+   ============================================================ */
+
+/* --- a soft light sweeping across the wax seal --- */
+.wax-shine{animation:waxSweep 5.6s cubic-bezier(.45,.05,.55,.95) infinite}
+@keyframes waxSweep{
+  0%,58%{transform:translateX(-80px)}
+  86%,100%{transform:translateX(80px)}
+}
+/* the envelope is off-screen once the letter is up; no point sweeping */
+body.is-open .wax-shine{animation-play-state:paused}
+
+/* --- glints popping around the envelope --- */
+/* Each glint is only lit for a fifth of its cycle, so with seven of them
+   fewer than one was on screen at a time on average and the effect read
+   as a speck rather than a twinkle. More of them, lit for longer. */
+.glints{position:absolute;inset:0;z-index:9;pointer-events:none}
+/* Cream, not red: a red sparkle on a cream page reads as a stray mark
+   rather than as light. These sit over the red wax, where a pale glint
+   actually reads as a sheen catching the light. The seal is centred at
+   roughly (50%, 74%) of .envelope-wrap — the wrap is 0.97x the envelope
+   width tall, and the seal sits 56% down the envelope body. */
+.glint{
+  position:absolute;color:var(--cream-w);
+  opacity:0;will-change:transform,opacity;
+  animation:glint 6.4s ease-in-out infinite;
+  animation-delay:var(--gd,0s);
+}
+@keyframes glint{
+  0%,100%{opacity:0;transform:scale(.2) rotate(0deg)}
+  4%{opacity:1;transform:scale(1.05) rotate(18deg)}
+  10%{opacity:.5;transform:scale(.82) rotate(30deg)}
+  16%{opacity:.95;transform:scale(1) rotate(40deg)}
+  24%{opacity:0;transform:scale(.35) rotate(55deg)}
+}
+body.is-opening .glint,body.is-open .glint{animation-play-state:paused;opacity:0}
+
+/* --- cursor parallax on the envelope --- */
+.envelope-tilt{
+  transform:rotate(0deg) translate(0,0);
+  transition:transform .5s cubic-bezier(.22,.85,.3,1);
+  will-change:transform;
+}
+
+/* --- petals falling over the open letter --- */
+.petals{
+  position:fixed;inset:0;z-index:4;pointer-events:none;overflow:hidden;
+  opacity:0;transition:opacity .9s ease;
+}
+body.is-open .petals{opacity:1}
+.petal{
+  position:absolute;top:-9vh;color:var(--cream-w);
+  opacity:0;animation:fall linear infinite;
+  will-change:transform,opacity;
+}
+@keyframes fall{
+  0%{opacity:0;transform:translate3d(0,0,0) rotate(0deg)}
+  12%{opacity:.55}
+  82%{opacity:.4}
+  100%{opacity:0;transform:translate3d(var(--px,26px),115vh,0) rotate(var(--pr,220deg))}
+}
+
+/* --- sound toggle --- */
+.sound{
+  position:fixed;right:clamp(12px,2.4vw,22px);bottom:clamp(12px,2.4vw,22px);
+  z-index:70;
+  width:38px;height:38px;border-radius:50%;
+  display:grid;place-items:center;
+  background:rgba(255,252,246,.72);
+  border:1px solid rgba(122,45,40,.32);
+  color:var(--burgundy);cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .25s ease,border-color .25s ease,color .25s ease;
+}
+body.is-open .sound{
+  background:rgba(255,240,236,.16);
+  border-color:rgba(255,240,236,.5);
+  color:var(--cream-w);
+}
+.sound:hover{background:rgba(255,255,255,.92)}
+body.is-open .sound:hover{background:rgba(255,240,236,.3)}
+.sound svg{width:19px;height:19px;display:block}
+.sound .ico-off{display:none}
+.sound[aria-pressed="false"] .ico-on{display:none}
+.sound[aria-pressed="false"] .ico-off{display:block}
+.sound:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+/* ============================================================
    PARTICLES
    ============================================================ */
 .burst{position:fixed;inset:0;z-index:50;pointer-events:none;overflow:hidden}
@@ -647,6 +735,19 @@ body.is-settled .envelope-float{will-change:auto}
 
 <body>
 <div class="burst" id="burst" aria-hidden="true"></div>
+<div class="petals" id="petals" aria-hidden="true"></div>
+
+<button class="sound" id="soundBtn" aria-pressed="true" aria-label="Turn sound off" title="Sound">
+  <svg class="ico-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z" fill="currentColor" stroke="none"/>
+    <path d="M15.6 9.2a4 4 0 0 1 0 5.6"/>
+    <path d="M18.2 6.6a7.6 7.6 0 0 1 0 10.8"/>
+  </svg>
+  <svg class="ico-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z" fill="currentColor" stroke="none"/>
+    <path d="M16 9.5l5 5M21 9.5l-5 5"/>
+  </svg>
+</button>
 
 <!-- shared decoration shapes (zero-size, referenced by every layer) -->
 <svg class="sprite" aria-hidden="true" focusable="false">
@@ -707,6 +808,7 @@ body.is-settled .envelope-float{will-change:auto}
     <div class="envelope-wrap">
 
       <div class="envelope-float">
+        <div class="envelope-tilt" id="envelopeTilt">
         <div class="envelope" id="envelope">
 
           <!-- back -->
@@ -793,6 +895,27 @@ body.is-settled .envelope-float{will-change:auto}
                        down to a sliver. -->
                   <clipPath id="halfL"><rect x="-220" y="-220" width="221" height="440"/></clipPath>
                   <clipPath id="halfR"><rect x="-1" y="-220" width="221" height="440"/></clipPath>
+                  <!-- the shine band. objectBoundingBox (the default) so the
+                       band travels with the rect it fills; with
+                       userSpaceOnUse it would stay put and the rect would
+                       slide underneath it. -->
+                  <linearGradient id="waxShine" x1="0.38" y1="0" x2="0.62" y2="0">
+                    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0"/>
+                    <stop offset="50%" stop-color="#FFFFFF" stop-opacity=".55"/>
+                    <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+                  </linearGradient>
+                  <!-- the flower's silhouette, reused as the clip for the
+                       shine sweep. The geometry is repeated rather than
+                       <use>-referencing the blob: a clipPath child that
+                       points at a <g> of shapes is not reliably supported. -->
+                  <clipPath id="waxClip">
+                    <ellipse cx="0" cy="-28" rx="15" ry="18.5"/>
+                    <ellipse cx="0" cy="-28" rx="15" ry="18.5" transform="rotate(72)"/>
+                    <ellipse cx="0" cy="-28" rx="15" ry="18.5" transform="rotate(144)"/>
+                    <ellipse cx="0" cy="-28" rx="15" ry="18.5" transform="rotate(216)"/>
+                    <ellipse cx="0" cy="-28" rx="15" ry="18.5" transform="rotate(288)"/>
+                    <circle cx="0" cy="0" r="17"/>
+                  </clipPath>
                   <g id="wax">
                     <!-- flower-shaped wax: five lobes merged with a centre
                          disc, so the seal reads as one pressed blob.
@@ -807,6 +930,10 @@ body.is-settled .envelope-float{will-change:auto}
                       <ellipse cx="0" cy="-28" rx="15" ry="18.5" transform="rotate(216)"/>
                       <ellipse cx="0" cy="-28" rx="15" ry="18.5" transform="rotate(288)"/>
                       <circle cx="0" cy="0" r="17"/>
+                    </g>
+                    <!-- a soft light sweeping across the wax, clipped to it -->
+                    <g clip-path="url(#waxClip)">
+                      <rect class="wax-shine" x="-78" y="-60" width="156" height="120" fill="url(#waxShine)"/>
                     </g>
                     <!-- the same flower pressed into the wax. Opaque, and
                          stroked in its own colour: translucent shapes
@@ -831,7 +958,10 @@ body.is-settled .envelope-float{will-change:auto}
           </div>
 
         </div>
+        </div>
       </div>
+
+      <div class="glints" id="glints" aria-hidden="true"></div>
 
       <button class="envelope-hit" id="openBtn" aria-label="Open the love letter">
         <span class="sr-only">Open the letter</span>
@@ -990,6 +1120,9 @@ body.is-settled .envelope-float{will-change:auto}
   const replay   = document.getElementById('replay');
   const burstBox = document.getElementById('burst');
   const flowerBox = document.getElementById('flowers');
+  const glintBox  = document.getElementById('glints');
+  const petalBox  = document.getElementById('petals');
+  const soundBtn  = document.getElementById('soundBtn');
   const hint     = document.getElementById('hint');
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1115,6 +1248,173 @@ body.is-settled .envelope-float{will-change:auto}
   })(10);
 
   /* ==========================================================
+     Ambient glints around the envelope
+     ========================================================== */
+  (function makeGlints(n){
+    const SPARK = 'M0-7 1.7-1.7 7 0 1.7 1.7 0 7-1.7 1.7-7 0-1.7-1.7Z';
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < n; i++){
+      const s = document.createElementNS(SVGNS, 'svg');
+      s.setAttribute('viewBox', '-8 -8 16 16');
+      s.setAttribute('class', 'glint');
+      const size = 8 + Math.random() * 7;
+      // Must land ON the wax: the seal's blob is only ~40px across, while
+      // the wrap is ~420px wide, so an offset of more than ~8% puts a pale
+      // glint on cream paper where it is invisible.
+      const a = Math.random() * Math.PI * 2;
+      const rad = Math.pow(Math.random(), 0.6);
+      // centred between the seal's middle and its own highlight (which sits
+      // up-left), so a glint tends to catch on the already-lit side
+      s.style.left = (48.5 + Math.cos(a) * rad * 7.5) + '%';
+      s.style.top  = (71 + Math.sin(a) * rad * 7.5) + '%';
+      s.style.width  = size + 'px';
+      s.style.height = size + 'px';
+      // negative delays start each glint mid-cycle, so they do not all pop
+      // together on the first pass
+      s.style.setProperty('--gd', (-Math.random() * 6.4).toFixed(2) + 's');
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', SPARK);
+      p.setAttribute('fill', 'currentColor');
+      s.appendChild(p);
+      frag.appendChild(s);
+    }
+    glintBox.appendChild(frag);
+  })(10);
+
+  /* ==========================================================
+     Petals falling over the open letter
+     ========================================================== */
+  (function makePetals(n){
+    const PETAL = 'M0-10C5-6 7 0 5 6 3 10-3 10-5 6-7 0-5-6 0-10Z';
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < n; i++){
+      const s = document.createElementNS(SVGNS, 'svg');
+      s.setAttribute('viewBox', '-9 -11 18 22');
+      s.setAttribute('class', 'petal');
+      const size = 9 + Math.random() * 11;
+      s.style.left   = (Math.random() * 98) + 'vw';
+      s.style.width  = size + 'px';
+      s.style.height = (size * 22 / 18) + 'px';
+      s.style.setProperty('--px', (Math.random() * 140 - 70) + 'px');
+      s.style.setProperty('--pr', (Math.random() * 520 - 260) + 'deg');
+      s.style.animationDuration = (9 + Math.random() * 11) + 's';
+      s.style.animationDelay = (-Math.random() * 18) + 's';
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', PETAL);
+      p.setAttribute('fill', 'currentColor');
+      s.appendChild(p);
+      frag.appendChild(s);
+    }
+    petalBox.appendChild(frag);
+  })(14);
+
+  /* ==========================================================
+     Cursor parallax — the envelope leans toward the pointer
+     ========================================================== */
+  (function parallax(){
+    const tilt = document.getElementById('envelopeTilt');
+    if (!tilt) return;
+    // pointless without a pointer, and a mousemove storm on touch
+    if (window.matchMedia('(hover: none)').matches) return;
+    const stage = document.getElementById('stage');
+    let raf = 0, nx = 0, ny = 0;
+    function apply(){
+      raf = 0;
+      // once the envelope is on its way out the tilt would fight the
+      // scene's own exit transform
+      if (document.body.classList.contains('is-opening') ||
+          document.body.classList.contains('is-open')) return;
+      tilt.style.transform =
+        'rotate(' + (nx * 2.2).toFixed(2) + 'deg) ' +
+        'translate(' + (nx * 3.5).toFixed(1) + 'px,' + (ny * 4.5).toFixed(1) + 'px)';
+    }
+    stage.addEventListener('mousemove', e => {
+      const r = env.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      // -1..1 measured from the envelope's centre, across half the viewport
+      nx = Math.max(-1, Math.min(1, (e.clientX - cx) / (window.innerWidth * 0.5)));
+      ny = Math.max(-1, Math.min(1, (e.clientY - cy) / (window.innerHeight * 0.5)));
+      if (!raf) raf = requestAnimationFrame(apply);
+    }, { passive: true });
+    stage.addEventListener('mouseleave', () => {
+      nx = 0; ny = 0;
+      if (!raf) raf = requestAnimationFrame(apply);
+    });
+  })();
+
+  /* ==========================================================
+     Sound — synthesised, so the page stays a single file with no
+     audio assets, and only ever started by a real user gesture.
+     ========================================================== */
+  const Sound = (function(){
+    let ctx = null, on = true;
+    try { on = localStorage.getItem('ll-sound') !== 'off'; } catch (e) {}
+    function ac(){
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      if (!ctx) ctx = new C();
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+    function tone(freq, dur, o){
+      if (!on) return;
+      const a = ac(); if (!a) return;
+      o = o || {};
+      const t0 = a.currentTime + (o.delay || 0);
+      const osc = a.createOscillator(), g = a.createGain();
+      osc.type = o.type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t0 + dur);
+      const vol = o.vol == null ? .1 : o.vol;
+      g.gain.setValueAtTime(.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol, t0 + (o.attack || .02));
+      g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+      osc.connect(g); g.connect(a.destination);
+      osc.start(t0); osc.stop(t0 + dur + .05);
+    }
+    // short filtered noise = paper / wax
+    function rasp(dur, vol, delay, f1, f2){
+      if (!on) return;
+      const a = ac(); if (!a) return;
+      const t0 = a.currentTime + (delay || 0);
+      const n = Math.max(1, Math.floor(a.sampleRate * dur));
+      const buf = a.createBuffer(1, n, a.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n) * (1 - i / n);
+      const src = a.createBufferSource(); src.buffer = buf;
+      const flt = a.createBiquadFilter(); flt.type = 'bandpass'; flt.Q.value = 1.1;
+      flt.frequency.setValueAtTime(f1, t0);
+      flt.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+      const g = a.createGain();
+      g.gain.setValueAtTime(vol == null ? .1 : vol, t0);
+      g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+      src.connect(flt); flt.connect(g); g.connect(a.destination);
+      src.start(t0); src.stop(t0 + dur);
+    }
+    return {
+      isOn: () => on,
+      set(v){ on = v; try { localStorage.setItem('ll-sound', v ? 'on' : 'off'); } catch (e) {} },
+      blip(){ tone(660, .12, { vol:.05, type:'triangle' }); },
+      crack(){ rasp(.16, .09, 0, 1500, 260); tone(220, .2, { type:'triangle', vol:.06, to:120 }); },
+      rise(){ rasp(.8, .04, 0, 700, 1600); tone(523.25, .45, { vol:.045, delay:.72 }); },
+      reveal(){ tone(659.25, 1.2, { vol:.055 }); tone(987.77, 1.5, { vol:.04, delay:.1 }); },
+      shut(){ rasp(.45, .045, 0, 900, 260); tone(392, .45, { vol:.045, to:294, delay:.45 }); }
+    };
+  })();
+
+  function paintSound(){
+    const on = Sound.isOn();
+    soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    soundBtn.setAttribute('aria-label', on ? 'Turn sound off' : 'Turn sound on');
+  }
+  paintSound();
+  soundBtn.addEventListener('click', () => {
+    Sound.set(!Sound.isOn());
+    paintSound();
+    if (Sound.isOn()) Sound.blip();
+  });
+
+  /* ==========================================================
      Wax shatter
      ========================================================== */
   /* The seal throws off flowers rather than wax crumbs, matching the
@@ -1178,12 +1478,15 @@ body.is-settled .envelope-float{will-change:auto}
       return;
     }
 
+    Sound.crack();
+    Sound.rise();
     shatter();
 
     // is-open lands only after the letter has finished sliding out
     setTimeout(() => {
       root.classList.add('is-open');
       state = 'open';
+      Sound.reveal();
       // the scene is the scroller now (the card grows taller than the
       // viewport), so reset IT rather than the inner panel
       const scroller = document.getElementById('sceneLetter');
@@ -1200,6 +1503,7 @@ body.is-settled .envelope-float{will-change:auto}
     state = 'closing';
     root.classList.remove('is-open', 'is-opening', 'is-settled');
     seal.classList.remove('is-breaking');
+    Sound.shut();
     openBtn.focus({ preventScroll: true });
     // the flap is the last thing to land
     const done = msVar('--t-close-flap', 600) + msVar('--dur-close-flap', 1200) + 120;

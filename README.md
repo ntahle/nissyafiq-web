@@ -6,8 +6,7 @@ it, and the letter reveals itself.
 ## Features
 
 - **Sealed envelope scene** with a 3D flower-shaped wax seal that cracks and
-  throws off flowers, drifting flower particles, and
-  paper grain texture
+  throws off flowers, drifting flower particles, and  paper grain texture
 - **Press-to-open interaction** — click, tap, or press `Space` / `Enter`.
   The seal shatters, the flap folds back behind the envelope, and the letter
   slides out
@@ -93,6 +92,27 @@ Two details in the letter layout are load-bearing:
 
 Because the card can be very tall, `.scene--letter` is the scroll container —
 not the inner panel. `open()` resets the scroll there.
+
+## Ambient effects
+
+- **Wax shimmer** — a soft band of light sweeps across the seal every few
+  seconds, clipped to the flower's silhouette. The clip geometry is repeated
+  inside `#waxClip` rather than `<use>`-referencing the blob: a clipPath child
+  pointing at a `<g>` of shapes is not reliably supported. The band's gradient
+  is `objectBoundingBox` so it travels with the rect; with `userSpaceOnUse` the
+  rect slides underneath a stationary band.
+- **Glints** — pale sparkles that pop and fade, positioned **on the wax**. This
+  matters: the seal's blob is only ~40px across while the wrapper is ~420px
+  wide, so an offset over ~8% puts a pale glint on cream paper where it is
+  invisible. They are cream, not red, for the same reason — a red sparkle on a
+  cream page reads as a stray mark rather than as light.
+- **Cursor parallax** — the envelope leans up to 2.2° toward the pointer, on a
+  wrapper between the bob and the 3D envelope so it does not fight either.
+  Skipped entirely on touch (`hover: none`).
+- **Falling petals** over the open letter, and a **sound toggle** (bottom
+  right). Sound is synthesised with WebAudio, so the page stays a single file
+  with no audio assets, and nothing is created until a real user gesture.
+  The mute preference persists in `localStorage`.
 
 ## Performance notes
 
