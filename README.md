@@ -158,8 +158,14 @@ no key — the topic name is the only identifier.
 Stage 3 uses an `IntersectionObserver` on the signature rather than scroll
 arithmetic. The card is far taller than any viewport, so the signature starts
 well below the fold and only becomes visible if she genuinely scrolls down to
-it. Each stage fires at most once, so a double-tap or a refresh cannot produce
-duplicates.
+it.
+
+Re-reading works: closing the letter re-arms stages 2 and 3, so a second read
+notifies again. Within a single read nothing duplicates — stage 2 watches for
+the class the main script adds when an open actually begins (not the click
+itself), so redundant taps are ignored, and stage 3 only fires once per read
+even if she scrolls back and forth past the signature. "Link opened" is the one
+genuine one-off, since the link really is loaded once.
 
 There is no email and no server-side code involved, which removes a whole class
 of failure: no sending domain, no spam filtering, no verification step. Nothing

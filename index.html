@@ -1657,33 +1657,47 @@ body.is-open .sound:hover{background:rgba(255,240,236,.3)}
       } catch (e) { /* swallow */ }
     }
 
-    function once(fn) {
-      var done = false;
-      return function () { if (!done) { done = true; fn(); } };
-    }
-
-    /* 1. the page loaded */
+    /* 1. the page loaded. Genuinely once — the link was loaded once. */
     notify('Link opened', 'eyes');
 
-    /* 2. the envelope was tapped */
-    var btn = document.getElementById('openBtn');
-    if (btn) btn.addEventListener('click', once(function () { notify('Envelope opened', 'love_letter'); }));
+    /* 2. the envelope was opened.
+          Watches the class the main script adds when an open actually
+          begins, rather than the click itself. That ignores the redundant
+          clicks that land while the letter is already opening, but still
+          fires on every later read, because the class is removed on close. */
+    if (typeof MutationObserver !== 'undefined') {
+      var wasOpening = document.body.classList.contains('is-opening');
+      new MutationObserver(function () {
+        var opening = document.body.classList.contains('is-opening');
+        if (opening && !wasOpening) notify('Envelope opened', 'love_letter');
+        wasOpening = opening;
+      }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
 
     /* 3. the signature scrolled into view. The card is far taller than the
-          viewport, so the signature starts well below the fold and only
-          becomes visible if she actually scrolls down to it. */
+          viewport, so it starts well below the fold and only appears if she
+          really scrolls down. Closing the letter re-arms it, so reading it
+          a second time notifies again. */
     var sign = document.getElementById('sign');
-    if (sign && 'IntersectionObserver' in window) {
-      var fire = once(function () {
-        notify('Read to the end', 'heart');
-        io.disconnect();
-      });
+    var endNotified = false;
+    if (sign && typeof IntersectionObserver !== 'undefined') {
       var io = new IntersectionObserver(function (entries) {
         for (var i = 0; i < entries.length; i++) {
-          if (entries[i].isIntersecting) { fire(); break; }
+          if (entries[i].isIntersecting && !endNotified) {
+            endNotified = true;
+            notify('Read to the end', 'heart');
+            break;
+          }
         }
       }, { threshold: 0.6 });
       io.observe(sign);
+
+      var replay = document.getElementById('replay');
+      if (replay) replay.addEventListener('click', function () {
+        // closing scrolls the letter back to the top, so the signature
+        // leaves the viewport and fires again the next time she reaches it
+        endNotified = false;
+      });
     }
   } catch (e) { /* never surface anything to the visitor */ }
 })();
