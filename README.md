@@ -140,6 +140,25 @@ slide rather than a static hiss.
 Measured: spectral flatness 0.52–0.59 (a pure tone sits near 0.01), zero
 oscillators, no cue reaches full level in the first 5% of its length.
 
+## Open notification
+
+The page emails the owner when the letter is opened, via Web3Forms. It runs in
+the browser because Web3Forms rejects server-side calls.
+
+Running client-side also removes the need for crawler detection: WhatsApp and
+Telegram build their link-preview cards by fetching the page **without
+executing JavaScript**, so a preview fetch can never trigger a notification.
+Only a real browser gets that far.
+
+The access key is public by design — Web3Forms keys are meant to sit in page
+source, and this one is restricted to `nissyafiq.site` so a copy is useless
+elsewhere. The payload contains only the time, a rough device/browser guess and
+the screen size; nothing about the visitor is collected and no IP is sent.
+
+This page is hosted as **Workers Static Assets**, not Pages, so there is no
+Worker script and repo variables cannot be set — which is why the notification
+lives in the page rather than server-side.
+
 ## Performance notes
 
 The reveal is deliberately structured so the browser can composite it:

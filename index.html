@@ -1573,5 +1573,73 @@ body.is-open .sound:hover{background:rgba(255,240,236,.3)}
   }, 9000);
 })();
 </script>
+
+<!-- ============================================================
+     OPEN NOTIFICATION
+
+     Emails the owner when the letter is opened. Runs in the browser
+     because Web3Forms rejects server-side calls, and because it means
+     link-preview fetchers cannot trigger it: WhatsApp and Telegram read
+     the page to build the preview card without executing JavaScript, so
+     only a real browser ever gets here. That replaces all the crawler
+     detection this used to need.
+
+     The access key below is public by design — it is meant to be in the
+     page source. It is restricted to nissyafiq.site, so a copy of it is
+     useless from anywhere else. Nothing about the visitor is collected;
+     it reports only the time and a rough device type.
+
+     Failure is silent and harmless: if the network is down or the key is
+     rejected, the letter is unaffected.
+     ============================================================ -->
+<script>
+(function () {
+  'use strict';
+  try {
+    var KEY = 'a068330b-20e2-4d38-87e4-a4e5c4060dc7';
+    var ua = navigator.userAgent;
+
+    var device = /iPhone/.test(ua) ? 'iPhone'
+               : /iPad/.test(ua) ? 'iPad'
+               : /Android/.test(ua) ? 'Android'
+               : /Macintosh/.test(ua) ? 'Mac'
+               : /Windows/.test(ua) ? 'Windows'
+               : 'unknown device';
+
+    var browser = /Edg\//.test(ua) ? 'Edge'
+                : /OPR\//.test(ua) ? 'Opera'
+                : /CriOS\//.test(ua) ? 'Chrome (iOS)'
+                : /FxiOS\//.test(ua) ? 'Firefox (iOS)'
+                : /Chrome\//.test(ua) ? 'Chrome'
+                : /Firefox\//.test(ua) ? 'Firefox'
+                : /Safari\//.test(ua) ? 'Safari'
+                : '';
+
+    var when = new Date().toLocaleString('en-GB', {
+      timeZone: 'Asia/Kuala_Lumpur',
+      weekday: 'short', day: '2-digit', month: 'short',
+      hour: '2-digit', minute: '2-digit', hour12: true
+    });
+
+    var body = {
+      access_key: KEY,
+      subject: 'The letter was opened',
+      from_name: 'nissyafiq.site',
+      message: 'The letter was opened.\n\n'
+             + 'When:   ' + when + '\n'
+             + 'Device: ' + device + (browser ? ' \u00b7 ' + browser : '') + '\n'
+             + 'Screen: ' + screen.width + '\u00d7' + screen.height
+    };
+
+    // fire and forget - nothing here may delay or break the letter
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body),
+      keepalive: true
+    }).catch(function () {});
+  } catch (e) { /* never surface anything to the visitor */ }
+})();
+</script>
 </body>
 </html>
