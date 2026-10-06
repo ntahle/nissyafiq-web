@@ -50,8 +50,17 @@ removed, the transition that runs is the one on the element's *new* style.
 The letter only rises about half way and stops, still part in the mouth of the
 envelope, exactly as in the reference. It does not come fully out.
 
-Four details here are load-bearing, and every one of them was a bug first:
+The wax seal is split into two halves by a `clip-path` so it can crack. Two
+things about that are load-bearing:
 
+- The clip must sit on the **same element as the transform**. Put it on an
+  untransformed wrapper and it stays put while the half slides out of it, so
+  the half gets sliced to a sliver instead of flying apart whole.
+- The two clip rects must **overlap** across the centre line. Abutting them
+  exactly at `x=0` left an antialiased seam that ran straight up the middle of
+  the top petal, making the closed seal look panelised.
+
+Four more details here are load-bearing, and every one of them was a bug first:
 - The flap's transform list must carry the **same three functions** as the
   closed pose (`translateZ() translateY() rotateX()`), or the browser falls
   back to matrix decomposition instead of interpolating function-by-function.

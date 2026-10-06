@@ -783,8 +783,16 @@ body.is-settled .envelope-float{will-change:auto}
                     <stop offset="55%" stop-color="#FFFFFF" stop-opacity=".11"/>
                     <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
                   </radialGradient>
-                  <clipPath id="halfL"><rect x="-56" y="-54" width="56" height="108"/></clipPath>
-                  <clipPath id="halfR"><rect x="0" y="-54" width="56" height="108"/></clipPath>
+                  <!-- Each half is the whole seal clipped to one side of
+                       the centre line. The two rects OVERLAP by 1 unit:
+                       abutting them exactly left an antialiased seam down
+                       x=0, which ran straight up the middle of the top
+                       petal and made the closed seal look panelised.
+                       They are also oversized, so a half keeps its whole
+                       body as it flies apart instead of being sliced
+                       down to a sliver. -->
+                  <clipPath id="halfL"><rect x="-220" y="-220" width="221" height="440"/></clipPath>
+                  <clipPath id="halfR"><rect x="-1" y="-220" width="221" height="440"/></clipPath>
                   <g id="wax">
                     <!-- flower-shaped wax: five lobes merged with a centre
                          disc, so the seal reads as one pressed blob.
@@ -816,8 +824,8 @@ body.is-settled .envelope-float{will-change:auto}
                     <ellipse cx="-15" cy="-30" rx="27" ry="20" fill="url(#waxHi)"/>
                   </g>
                 </defs>
-                <g clip-path="url(#halfL)"><g class="seal__half seal__half--l"><use href="#wax"/></g></g>
-                <g clip-path="url(#halfR)"><g class="seal__half seal__half--r"><use href="#wax"/></g></g>
+                <g class="seal__half seal__half--l" clip-path="url(#halfL)"><use href="#wax"/></g>
+                <g class="seal__half seal__half--r" clip-path="url(#halfR)"><use href="#wax"/></g>
               </svg>
             </div>
           </div>
