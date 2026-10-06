@@ -114,6 +114,20 @@ not the inner panel. `open()` resets the scroll there.
   with no audio assets, and nothing is created until a real user gesture.
   The mute preference persists in `localStorage`.
 
+## The sound
+
+It is **paper, not music** — every cue is filtered noise, with no oscillators
+at all. Paper has no pitch; it is broadband noise with a granular envelope, so
+the noise is broken into short random grains (1.5–8.5 ms) of varying weight.
+That irregular amplitude texture is what makes it read as a sheet being
+handled rather than as hiss. A highpass (420–620 Hz) removes the low end,
+because leaving it in makes the noise read as a rumble, and a bandpass
+(700–2600 Hz) keeps it in the paper band. Two cues sweep their band, which is
+what makes a sheet sliding sound like a slide rather than a static hiss.
+
+Measured: spectral flatness 0.49–0.60 (a pure tone sits near 0.01), grain
+amplitude variation 0.46–0.71, zero oscillators.
+
 ## Performance notes
 
 The reveal is deliberately structured so the browser can composite it:
