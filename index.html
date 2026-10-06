@@ -1575,17 +1575,20 @@ body.is-open .sound:hover{background:rgba(255,240,236,.3)}
 </script>
 
 <!-- ============================================================
-     OPEN NOTIFICATION
+     OPEN NOTIFICATION — three stages
 
-     Pushes to ntfy (ntfy.sh/nissyafiq) when the letter is opened.
-     Subscribe to that same topic in the ntfy app to get it on your
-     phone, or open https://ntfy.sh/nissyafiq in a browser to see the
-     recent list.
+     Pushes to ntfy (ntfy.sh/nissyafiq) as the letter is read. Subscribe
+     to that topic in the ntfy app to get them on your phone, or open
+     https://ntfy.sh/nissyafiq in a browser to see the recent list.
 
-     This runs in the browser, which is what keeps link previews quiet:
-     WhatsApp and Telegram build their preview cards by fetching the page
-     WITHOUT executing JavaScript, so a preview fetch can never get here.
-     Only a real browser can.
+       1. "Link opened"      the page loaded
+       2. "Envelope opened"  she tapped the seal
+       3. "Read to the end"  the signature scrolled into view
+
+     All of this runs in the browser, which is what keeps link previews
+     quiet: WhatsApp and Telegram build their preview cards by fetching
+     the page WITHOUT executing JavaScript, so a preview fetch can never
+     reach any of it. Only a real browser can.
 
      No key and no account - the topic name is the only thing identifying
      it, and it is deliberately in the page source. The worst anyone could
@@ -1594,8 +1597,9 @@ body.is-open .sound:hover{background:rgba(255,240,236,.3)}
      Note ntfy.sh keeps free-tier messages for 12 hours, so the topic page
      is a recent view rather than a permanent log.
 
-     Failure is silent: if the network is down the letter is unaffected,
-     and nothing is collected from the visitor beyond a rough device guess.
+     Failure is silent throughout: if the network is down the letter is
+     unaffected, and nothing is collected beyond what the browser offers
+     freely (no IP, no location prompt).
      ============================================================ -->
 <script>
 (function () {
@@ -1604,40 +1608,83 @@ body.is-open .sound:hover{background:rgba(255,240,236,.3)}
     var TOPIC = 'https://ntfy.sh/nissyafiq';
     var ua = navigator.userAgent;
 
-    var device = /iPhone/.test(ua) ? 'iPhone'
-               : /iPad/.test(ua) ? 'iPad'
-               : /Android/.test(ua) ? 'Android'
-               : /Macintosh/.test(ua) ? 'Mac'
-               : /Windows/.test(ua) ? 'Windows'
-               : 'unknown device';
+    function deviceOf() {
+      return /iPhone/.test(ua) ? 'iPhone'
+           : /iPad/.test(ua) ? 'iPad'
+           : /Android/.test(ua) ? 'Android'
+           : /Macintosh/.test(ua) ? 'Mac'
+           : /Windows/.test(ua) ? 'Windows'
+           : 'unknown device';
+    }
+    function browserOf() {
+      return /Edg\//.test(ua) ? 'Edge'
+           : /OPR\//.test(ua) ? 'Opera'
+           : /CriOS\//.test(ua) ? 'Chrome (iOS)'
+           : /FxiOS\//.test(ua) ? 'Firefox (iOS)'
+           : /Chrome\//.test(ua) ? 'Chrome'
+           : /Firefox\//.test(ua) ? 'Firefox'
+           : /Safari\//.test(ua) ? 'Safari'
+           : '';
+    }
+    function nowText() {
+      return new Date().toLocaleString('en-GB', {
+        timeZone: 'Asia/Kuala_Lumpur',
+        weekday: 'short', day: '2-digit', month: 'short',
+        hour: '2-digit', minute: '2-digit', hour12: true
+      });
+    }
 
-    var browser = /Edg\//.test(ua) ? 'Edge'
-                : /OPR\//.test(ua) ? 'Opera'
-                : /CriOS\//.test(ua) ? 'Chrome (iOS)'
-                : /FxiOS\//.test(ua) ? 'Firefox (iOS)'
-                : /Chrome\//.test(ua) ? 'Chrome'
-                : /Firefox\//.test(ua) ? 'Firefox'
-                : /Safari\//.test(ua) ? 'Safari'
-                : '';
-
-    var when = new Date().toLocaleString('en-GB', {
-      timeZone: 'Asia/Kuala_Lumpur',
-      weekday: 'short', day: '2-digit', month: 'short',
-      hour: '2-digit', minute: '2-digit', hour12: true
-    });
-
-    var body = 'The letter was opened.\n\n'
-             + 'When:   ' + when + '\n'
-             + 'Device: ' + device + (browser ? ' \u00b7 ' + browser : '') + '\n'
-             + 'Screen: ' + screen.width + '\u00d7' + screen.height;
+    // her timezone is the closest thing to "where" available without a
+    // permission prompt, and it costs nothing
+    var tz = '', lang = navigator.language || '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
 
     // fire and forget - nothing here may delay or break the letter
-    fetch(TOPIC, {
-      method: 'POST',
-      headers: { Title: 'The letter was opened', Tags: 'love_letter' },
-      body: body,
-      keepalive: true
-    }).catch(function () {});
+    function notify(title, tag) {
+      try {
+        var body = title + '\n\n'
+                 + 'When:   ' + nowText() + '\n'
+                 + 'Device: ' + deviceOf() + (browserOf() ? ' \u00b7 ' + browserOf() : '') + '\n'
+                 + 'Screen: ' + screen.width + '\u00d7' + screen.height
+                 + (tz   ? '\nWhere:  ' + tz   : '')
+                 + (lang ? '\nLang:   ' + lang : '');
+        fetch(TOPIC, {
+          method: 'POST',
+          headers: { Title: title, Tags: tag, Priority: 'default' },
+          body: body,
+          keepalive: true
+        }).catch(function () {});
+      } catch (e) { /* swallow */ }
+    }
+
+    function once(fn) {
+      var done = false;
+      return function () { if (!done) { done = true; fn(); } };
+    }
+
+    /* 1. the page loaded */
+    notify('Link opened', 'eyes');
+
+    /* 2. the envelope was tapped */
+    var btn = document.getElementById('openBtn');
+    if (btn) btn.addEventListener('click', once(function () { notify('Envelope opened', 'love_letter'); }));
+
+    /* 3. the signature scrolled into view. The card is far taller than the
+          viewport, so the signature starts well below the fold and only
+          becomes visible if she actually scrolls down to it. */
+    var sign = document.getElementById('sign');
+    if (sign && 'IntersectionObserver' in window) {
+      var fire = once(function () {
+        notify('Read to the end', 'heart');
+        io.disconnect();
+      });
+      var io = new IntersectionObserver(function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) { fire(); break; }
+        }
+      }, { threshold: 0.6 });
+      io.observe(sign);
+    }
   } catch (e) { /* never surface anything to the visitor */ }
 })();
 </script>

@@ -142,10 +142,24 @@ oscillators, no cue reaches full level in the first 5% of its length.
 
 ## Open notification
 
-The page pushes to **ntfy** (`ntfy.sh/nissyafiq`) when the letter is opened.
-Subscribe to that topic in the ntfy app to get it on your phone, or open
+The page pushes to **ntfy** (`ntfy.sh/nissyafiq`) as the letter is read, in
+three stages:
+
+| | When | Title |
+|---|---|---|
+| 1 | the page loads | `Link opened` |
+| 2 | she taps the seal | `Envelope opened` |
+| 3 | the signature scrolls into view | `Read to the end` |
+
+Subscribe to that topic in the ntfy app to get them on your phone, or open
 `https://ntfy.sh/nissyafiq` in a browser to see the recent list. No account and
 no key — the topic name is the only identifier.
+
+Stage 3 uses an `IntersectionObserver` on the signature rather than scroll
+arithmetic. The card is far taller than any viewport, so the signature starts
+well below the fold and only becomes visible if she genuinely scrolls down to
+it. Each stage fires at most once, so a double-tap or a refresh cannot produce
+duplicates.
 
 There is no email and no server-side code involved, which removes a whole class
 of failure: no sending domain, no spam filtering, no verification step. Nothing
@@ -153,11 +167,11 @@ that can silently swallow a notification while still reporting success.
 
 Running in the browser also removes the need for crawler detection: WhatsApp and
 Telegram build their link-preview cards by fetching the page **without executing
-JavaScript**, so a preview fetch can never trigger a notification. Only a real
-browser gets that far.
+JavaScript**, so a preview fetch can never trigger a notification.
 
-The payload contains only the time, a rough device/browser guess and the screen
-size. Nothing about the visitor is collected and no IP is sent.
+The payload carries the local time, device, browser, screen size, timezone and
+language. No IP and no location prompt — timezone is the closest thing to
+"where" that a browser offers for free. Nothing identifies the visitor.
 
 Two things to know:
 
