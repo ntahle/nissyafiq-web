@@ -142,18 +142,29 @@ oscillators, no cue reaches full level in the first 5% of its length.
 
 ## Open notification
 
-The page emails the owner when the letter is opened, via Web3Forms. It runs in
-the browser because Web3Forms rejects server-side calls.
+The page pushes to **ntfy** (`ntfy.sh/nissyafiq`) when the letter is opened.
+Subscribe to that topic in the ntfy app to get it on your phone, or open
+`https://ntfy.sh/nissyafiq` in a browser to see the recent list. No account and
+no key — the topic name is the only identifier.
 
-Running client-side also removes the need for crawler detection: WhatsApp and
-Telegram build their link-preview cards by fetching the page **without
-executing JavaScript**, so a preview fetch can never trigger a notification.
-Only a real browser gets that far.
+There is no email and no server-side code involved, which removes a whole class
+of failure: no sending domain, no spam filtering, no verification step. Nothing
+that can silently swallow a notification while still reporting success.
 
-The access key is public by design — Web3Forms keys are meant to sit in page
-source, and this one is restricted to `nissyafiq.site` so a copy is useless
-elsewhere. The payload contains only the time, a rough device/browser guess and
-the screen size; nothing about the visitor is collected and no IP is sent.
+Running in the browser also removes the need for crawler detection: WhatsApp and
+Telegram build their link-preview cards by fetching the page **without executing
+JavaScript**, so a preview fetch can never trigger a notification. Only a real
+browser gets that far.
+
+The payload contains only the time, a rough device/browser guess and the screen
+size. Nothing about the visitor is collected and no IP is sent.
+
+Two things to know:
+
+- The topic name is public — it sits in the page source, so anyone who reads it
+  could send nuisance notifications. That is the entire worst case.
+- ntfy.sh keeps free-tier messages for **12 hours**, so the topic page is a
+  recent view rather than a permanent log.
 
 This page is hosted as **Workers Static Assets**, not Pages, so there is no
 Worker script and repo variables cannot be set — which is why the notification
